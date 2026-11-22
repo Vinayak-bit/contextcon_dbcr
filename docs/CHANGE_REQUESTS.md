@@ -12,3 +12,11 @@ Template:
 - Proposed signature / shape:
 - Status: open
 ```
+
+## [L3 → L4] Count lab-extraction LLM calls in the job's usage — 2026-11-22
+- File(s): `server/pipeline/job.js` (`makeCtx`)
+- What & why: `academic.js#findLabs` calls `ctx.llm.chatJson` to extract lab names from web results, but `ctx` has no
+  usage accumulator, so those DeepSeek calls are missing from `SearchJob.llmUsage`. Low priority; nothing breaks.
+- Proposed signature / shape: `llm: { enabled, chatJson, usage: job.llmUsage }` in `makeCtx`. L3 already passes
+  `usage: ctx.llm.usage` (undefined today, which chatJson tolerates).
+- Status: open
