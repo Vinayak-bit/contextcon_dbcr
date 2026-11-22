@@ -150,3 +150,21 @@ Verified by Laptop 4: only Laptop 2 files changed, and `npm run check` passes wi
 
 That candidate's "Student" stage confirms Review 4 item 1 for Laptop 3 (a student passed the "Working Professionals —
 Engineers" filter on headline alone).
+
+## Review 7 (2026-11-22) — Laptop 3 Review 4 fixes
+
+`laptop-3/retrieval-pipeline` at b966841. **Approved.** Both Review 4 items are done:
+1. `matchRoles`: only a recorded **current role** verifies a type. The headline alone never does. With no current role
+   the person is `unverified`, except that a current enrollment (school end year ≥ this year) verifies student types, and
+   PhD types when the degree is doctoral. Titles are matched one at a time, so words from two different titles no longer
+   combine.
+2. `academic.js`: a disabled or unavailable Scholar source gives **one** friendly warning ("Academic paper search is
+   temporarily unavailable; results come from profile search."). Raw messages go to the progress log.
+
+Verified by Laptop 4: built on current `main`, only Laptop 3 files changed, and `npm run check` passes with 56 tests. Re-running
+`matchRoles` on the saved live-run people (real Crustdata data): the four working engineers still match, and the MS
+student with no current role is now `unverified`. The warning text wasn't re-checked live, to save credits. Its unit test
+covers it.
+
+Note for Laptop 4: `enrollments()` reads the degree from the education evidence text produced by `normalize.js`
+("Education: <degree, field> at <school> (<year>)"). Keep that format stable, or tell Laptop 3 if it changes.
