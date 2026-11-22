@@ -135,3 +135,18 @@ showed "4 type or size unverified, 9 organization type not matching, 3 duplicate
 
 Open items: Laptop 3's two Review 4 follow-ups (role match must not rely on the headline alone when there is no current
 role; a single friendly warning while Crustdata's scholar sources are disabled).
+
+## Review 6 (2026-11-22) — Laptop 2 card & header polish
+
+`laptop-2/results-ui` at c38f5d7 ("Polish cards for academic-only people and phone header"). **Approved and merged.**
+- Cards: when role and affiliation are both missing, one "Role and affiliation not available" line replaces the
+  placeholders. An "Unknown" career stage is hidden. Accomplishments already shown under relevant work aren't repeated
+  (the drawer keeps all evidence).
+- Header: short Crustdata label on phones ("Connected", "Sign in"…), with the full label kept for screen readers.
+
+Verified by Laptop 4: only Laptop 2 files changed, and `npm run check` passes with 53 tests. On the saved live search
+(real Crustdata data), the blank-role candidate shows "Role and affiliation not available · Boston … · Student". At
+375 px the header shows "Connected" with no horizontal scroll.
+
+That candidate's "Student" stage confirms Review 4 item 1 for Laptop 3 (a student passed the "Working Professionals —
+Engineers" filter on headline alone).
