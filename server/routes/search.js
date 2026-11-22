@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { PERSONAS } from '../../shared/catalog.js';
 import { validateTopic } from '../llm/topic.js';
+import { draftOutreach } from '../llm/outreach.js';
 import { createJob, findCandidate, getJob, loadMore, publicJob, resultsPage } from '../pipeline/job.js';
 import { lookupWorkEmail } from '../pipeline/contact.js';
 import { HttpError } from '../util.js';
@@ -47,4 +48,11 @@ searchRouter.get('/search/:id/candidates/:cid', requireUser, (req, res) => {
 searchRouter.post('/search/:id/candidates/:cid/work-email', requireUser, rateLimit({ windowMs: 60_000, max: 20 }), wrap(async (req, res) => {
   const job = getJob(req.params.id, req.user);
   res.json(await lookupWorkEmail(job, findCandidate(job, req.params.cid)));
+}));
+
+// Compose only. The user's mail app handles sending after review.
+searchRouter.post('/search/:id/candidates/:cid/outreach-draft', requireUser, rateLimit({ windowMs: 60_000, max: 10 }), wrap(async (req, res) => {
+  const job = getJob(req.params.id, req.user);
+  const candidate = findCandidate(job, req.params.cid);
+  res.json(await draftOutreach(job, candidate, req.user, req.body));
 }));

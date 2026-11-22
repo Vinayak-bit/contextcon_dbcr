@@ -400,5 +400,22 @@ export interface WorkEmailLookup {
   sample?: boolean;
 }
 
+// ---------------------------------------------------------- outreach email ---
+export type OutreachPurpose = 'meeting' | 'research_internship' | 'internship' | 'collaboration' | 'other';
+
+export interface OutreachRequest {
+  purpose: OutreachPurpose;
+  notes?: string;
+}
+
+export interface OutreachDraft {
+  subject: string;
+  body: string;
+  sources: (EvidenceItem & { url: string })[];
+  retrievedAt?: string;
+  sample: boolean;
+  engine: 'deepseek' | 'template';
+}
+
 // ---------------------------------------------------------------- errors ----
 export interface ApiErrorBody { error: { message: string; code?: string; details?: unknown } }

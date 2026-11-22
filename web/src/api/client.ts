@@ -2,7 +2,7 @@
 import type {
   AppStatus, Me, DiscoverResponse, LinksRequest, LinksResponse, OrgProfile, PersonaId,
   TopicValidateRequest, TopicValidation, SearchRequest, StartSearchResponse, SearchJob,
-  ResultsPage, TabKey, Candidate, UserProfile, ApiErrorBody, WorkEmailLookup,
+  OutreachDraft, OutreachRequest, ResultsPage, TabKey, Candidate, UserProfile, ApiErrorBody, WorkEmailLookup,
 } from './types';
 
 export class ApiError extends Error {
@@ -78,6 +78,9 @@ export const api = {
   candidate: (id: string, candidateId: string) => request<Candidate>('GET', `/search/${encodeURIComponent(id)}/candidates/${encodeURIComponent(candidateId)}`),
   /** On-demand only: may spend a Crustdata contact credit when an email is found. */
   workEmail: (id: string, candidateId: string) => request<WorkEmailLookup>('POST', `/search/${encodeURIComponent(id)}/candidates/${encodeURIComponent(candidateId)}/work-email`),
+  draftOutreach: (jobId: string, candidateId: string, body: OutreachRequest) => request<OutreachDraft>(
+    'POST', `/search/${encodeURIComponent(jobId)}/candidates/${encodeURIComponent(candidateId)}/outreach-draft`, body,
+  ),
 };
 
 export type Api = typeof api;

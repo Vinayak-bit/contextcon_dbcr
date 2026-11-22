@@ -111,3 +111,9 @@
 .rs-email__msg { font-size: .88rem; color: var(--text-2); }
 .rs-email__msg--warn { color: var(--warning); }
 .rs-email__msg--error { color: var(--danger); }
+
+.rs-outreach__fields { padding: 0; margin: 0; min-width: 0; border: 0; }
+.rs-outreach__editor { padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.rs-outreach details { overflow-wrap: anywhere; }
+.rs-outreach summary { cursor: pointer; font-weight: 600; }
+.rs-outreach details ul { padding-inline-start: var(--space-5); }

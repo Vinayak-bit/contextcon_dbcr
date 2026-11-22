@@ -1,6 +1,6 @@
 // Result cards for individuals and organizations. Score at a glance on the right,
 // claims with evidence links on the left, full detail in the ranking drawer.
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { Candidate, GroundedItem, IndividualCandidate, OrganizationCandidate } from '../../api/types';
 import { Badge, Button, Card, Chip, ScoreBar, ScoreRing } from '../../ui';
 import { evidenceMap, GroundedLine, type EvidenceMap } from './Evidence';
@@ -10,7 +10,13 @@ import { WorkEmail } from './WorkEmail';
 const MAX_CHIPS = 6;
 
 /** One ranked result. `onDetails` opens the ranking drawer. */
-export const CandidateCard = memo(function CandidateCard({ jobId, candidate, onDetails }: { jobId: string; candidate: Candidate; onDetails(c: Candidate): void }) {
+export const CandidateCard = memo(function CandidateCard({ jobId, candidate, onDetails, onOutreach }: {
+  jobId: string;
+  candidate: Candidate;
+  onDetails(c: Candidate): void;
+  onOutreach(candidate: Candidate, addresses: string[]): void;
+}) {
+  const [addresses, setAddresses] = useState<string[]>([]);
   const ev = useMemo(() => evidenceMap(candidate.evidence), [candidate.evidence]);
   const geo = geoLabel(candidate.meta.geo, candidate.candidate_type);
   const r = candidate.ranking;
@@ -39,7 +45,10 @@ export const CandidateCard = memo(function CandidateCard({ jobId, candidate, onD
           {r.why_relevant && <p className="rs-why"><strong>Why relevant: </strong>{r.why_relevant}</p>}
 
           {candidate.candidate_type === 'individual' ? <IndividualBody c={candidate} ev={ev} /> : <OrgBody c={candidate} ev={ev} />}
-          {candidate.candidate_type === 'individual' && <div className="rs-contact"><WorkEmail jobId={jobId} candidate={candidate} /></div>}
+          <div className="rs-contact row">
+            {candidate.candidate_type === 'individual' && <WorkEmail jobId={jobId} candidate={candidate} onAddresses={setAddresses} />}
+            <Button size="sm" variant="secondary" onClick={() => onOutreach(candidate, addresses)}>Draft email</Button>
+          </div>
 
           <footer className="rs-card__foot">
             <SourceLinks c={candidate} />

@@ -9,6 +9,7 @@ import { CandidateCard } from './CandidateCard';
 import { BroadenActions, ExclusionLine } from './Exclusions';
 import { TabProgress } from './Progress';
 import { RankingDrawer } from './RankingDrawer';
+import { OutreachComposer } from './OutreachComposer';
 import { EnginesFooter, SummaryBar } from './Summary';
 import { TAB_LABELS } from './labels';
 import './results.css';
@@ -46,6 +47,11 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
   const [views, setViews] = useState<Partial<Record<TabKey, TabView>>>({});
   const [activeTab, setActiveTab] = useState<TabKey | null>(null);
   const [details, setDetails] = useState<Candidate | null>(null);
+  const [outreach, setOutreach] = useState<{ jobId: string; candidate: Candidate; addresses: string[] } | null>(null);
+  const openOutreach = useCallback((candidate: Candidate, addresses: string[]) => {
+    setOutreach({ jobId, candidate, addresses });
+  }, [jobId]);
+  const closeOutreach = useCallback(() => setOutreach(null), []);
   const [dismissed, setDismissed] = useState<number[]>([]);
   const [rerunError, setRerunError] = useState<ApiError | Error | null>(null);
   const listTop = useRef<HTMLDivElement>(null);
@@ -53,7 +59,7 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
   viewsRef.current = views;
 
   // Reset everything when navigating to a different job.
-  useEffect(() => { setJob(null); setJobError(null); setViews({}); setActiveTab(null); setDetails(null); setDismissed([]); setRerunError(null); }, [jobId]);
+  useEffect(() => { setJob(null); setJobError(null); setViews({}); setActiveTab(null); setDetails(null); setOutreach(null); setDismissed([]); setRerunError(null); }, [jobId]);
 
   const tabKeys = job ? (['individuals', 'organizations'] as TabKey[]).filter((k) => job.tabs[k]) : [];
   const tab = activeTab && tabKeys.includes(activeTab) ? activeTab : tabKeys[0] ?? null;
@@ -200,7 +206,7 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
                 </EmptyState>
               ) : (
                 <ol className="rs-cards">
-                  {page.candidates.map((c) => <li key={c.candidate_id}><CandidateCard jobId={jobId} candidate={c} onDetails={setDetails} /></li>)}
+                  {page.candidates.map((c) => <li key={`${jobId}:${c.candidate_id}`}><CandidateCard jobId={jobId} candidate={c} onDetails={setDetails} onOutreach={openOutreach} /></li>)}
                 </ol>
               )}
               <Pager
@@ -232,6 +238,7 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
 
       <EnginesFooter job={job} />
       <RankingDrawer jobId={jobId} candidate={details} onClose={() => setDetails(null)} />
+      {outreach?.jobId === jobId && <OutreachComposer {...outreach} onClose={closeOutreach} />}
     </div>
   );
 }

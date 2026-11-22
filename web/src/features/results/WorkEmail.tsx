@@ -6,7 +6,11 @@ import type { IndividualCandidate, WorkEmailLookup } from '../../api/types';
 import { Badge, Button } from '../../ui';
 import { formatTime } from './labels';
 
-export function WorkEmail({ jobId, candidate }: { jobId: string; candidate: IndividualCandidate }) {
+export function WorkEmail({ jobId, candidate, onAddresses }: {
+  jobId: string;
+  candidate: IndividualCandidate;
+  onAddresses(addresses: string[]): void;
+}) {
   const [result, setResult] = useState<WorkEmailLookup | null>(null);
   const [loading, setLoading] = useState(false);
   const hasProfile = Boolean(candidate.meta.linkedin) && !candidate.meta.academicOnly;
@@ -15,7 +19,9 @@ export function WorkEmail({ jobId, candidate }: { jobId: string; candidate: Indi
     if (loading) return;
     setLoading(true);
     try {
-      setResult(await api.workEmail(jobId, candidate.candidate_id));
+      const lookup = await api.workEmail(jobId, candidate.candidate_id);
+      setResult(lookup);
+      onAddresses(lookup.status === 'found' && !lookup.sample ? lookup.emails.map(({ email }) => email) : []);
     } catch (err) {
       setResult({ status: 'error', emails: [], source: 'crustdata', retrievedAt: new Date().toISOString(), message: err instanceof Error ? err.message : 'The lookup failed. Try again.' });
     } finally {
@@ -42,7 +48,7 @@ export function WorkEmail({ jobId, candidate }: { jobId: string; candidate: Indi
       <span className="rs-email" aria-live="polite">
         {result.emails.map((e) => (
           <span key={e.email} className="rs-email__item">
-            <a href={`mailto:${e.email}`}>{e.email}</a>
+            <a href={`mailto:${encodeURIComponent(e.email).replace('%40', '@')}`}>{e.email}</a>
             {e.status && <Badge tone={e.status === 'verified' ? 'success' : 'neutral'}>{e.status}</Badge>}
           </span>
         ))}
