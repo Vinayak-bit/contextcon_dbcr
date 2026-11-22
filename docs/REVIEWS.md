@@ -107,3 +107,17 @@ documented as "type or size unverified" (no new keys).
 
 **Laptop 2, small follow-up:** in `labels.ts`, label `unverified_role` per tab, as "role unverified" for Individuals and
 "type or size unverified" for Organizations. The include-unverified offer already counts it, so no other change is needed.
+
+## Review 4 (2026-11-22) — first live Crustdata run
+
+The app connected to `install.crustdata.com/mcp` with an API key (Bearer). All 8 tools were discovered by name. One search
+(student persona, Both, US + India, limits 2 queries / 10 results / 5 enrichments per tab) completed in ~2 min for
+**40.8 credits**: person_search 15.2 (mostly the developer-profile second pull), person_enrich 9, company_enrich 10,
+company_search 4.6, web_search 2. Results were relevant and verified (US/India), ranked by Jev, and rendered correctly.
+
+**Laptop 3, required:**
+1. `matchRoles`: a person with **no current role** must not match on the headline alone (an MS student with headline
+   "AI/ML Engineer" passed as "Working Professionals — Engineers"). With no current role, return `unverified`.
+2. Crustdata currently rejects the `scholar-articles` and `scholar-articles-enriched` sources with 400 "Source temporarily
+   disabled" (reported to Crustdata). Turn that into one friendly warning ("Academic paper search is temporarily
+   unavailable; results come from profile search") instead of a raw message per query.
