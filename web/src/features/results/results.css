@@ -94,7 +94,7 @@
 
 @media (max-width: 760px) {
   .rs-card article { grid-template-columns: 1fr; }
-  .rs-card__scores { border-left: 0; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-lg) var(--radius-lg); order: -1; flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+  .rs-card__scores { border-left: 0; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-lg) var(--radius-lg); flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
   .rs-bars { flex: 1 1 200px; }
   .rs-two-col { grid-template-columns: 1fr; }
 }

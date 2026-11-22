@@ -86,7 +86,10 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
 
   const anyAwaiting = Object.values(views).some((v) => v?.awaitingPage);
   const needsPage1 = job ? tabKeysOf(job).some((k) => (job.tabs[k]?.pagesReady ?? 0) >= 1 && !views[k]?.pages[1] && !views[k]?.error) : false;
-  const polling = !jobError && (!job || Object.values(job.tabs).some(isActive) || anyAwaiting || needsPage1);
+  // A client error (404 not found, 401 signed out…) is final and stops polling; Retry restarts it.
+  // Network failures and 5xx keep polling, with a warning until a poll succeeds again.
+  const fatal = jobError instanceof ApiError && jobError.status >= 400 && jobError.status < 500;
+  const polling = !fatal && (!job || Object.values(job.tabs).some(isActive) || anyAwaiting || needsPage1);
 
   usePolling(async () => {
     try {
@@ -122,6 +125,7 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
 
   // ---------------------------------------------------------------- render ---
   if (!job) {
+    if (jobError && !fatal) return <div className="rs-center"><Spinner label={`Can't reach the server (${jobError.message}). Retrying…`} /></div>;
     if (jobError) {
       const notFound = jobError instanceof ApiError && jobError.status === 404;
       return (
@@ -148,13 +152,13 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
       <SummaryBar job={job} onEdit={() => onEditSearch(job.request)} onNew={onNewSearch} />
 
       {job.sample && <Notice tone="sample">{SAMPLE_BANNER}</Notice>}
-      {jobError && <Notice tone="warning" action={<Button size="sm" variant="secondary" onClick={retryJob}>Retry</Button>}>Lost connection to the server: {jobError.message}</Notice>}
+      {jobError && <Notice tone="warning">Lost connection to the server ({jobError.message}). Retrying automatically…</Notice>}
       {job.error && <Notice tone="danger">{job.error}</Notice>}
       {job.warnings.map((w, i) => !dismissed.includes(i) && <Notice key={i} tone="warning" onDismiss={() => setDismissed((d) => [...d, i])}>{w}</Notice>)}
       {rerunError && <RerunError error={rerunError} onSample={() => rerun({ ...job.request, sample: true }).catch(() => undefined)} />}
 
       {showTabs && (
-        <Tabs tabs={tabKeys.map((k) => ({ key: k, label: TAB_LABELS[k], count: countFor(views[k]) }))} value={tab!} onChange={(k) => { setActiveTab(k); setDetails(null); }} />
+        <Tabs tabs={tabKeys.map((k) => ({ key: k, label: job.tabs[k]?.status === 'error' ? `${TAB_LABELS[k]} · failed` : TAB_LABELS[k], count: countFor(views[k]) }))} value={tab!} onChange={(k) => { setActiveTab(k); setDetails(null); }} />
       )}
 
       {/* Progress for every running tab, so both stay visible while one is shown. */}
@@ -202,12 +206,21 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
                 onPrev={() => goToPage(tab, view.page - 1)}
                 onNext={() => goToPage(tab, view.page + 1)}
               />
-              {awaiting && <TabProgress tab={tab} status={status} compact />}
             </>
           )}
           {!page && !isActive(status) && status.status !== 'error' && !view.error && (view.loading || status.pagesReady >= 1
             ? <div className="rs-center"><Spinner label="Loading results…" /></div>
-            : <EmptyState title="No results">The search finished without building a page of results.</EmptyState>)}
+            : (
+              <>
+                <EmptyState title="No matches for these constraints" action={<Button variant="secondary" onClick={() => onEditSearch(job.request)}>Change geography or types</Button>}>
+                  <ExclusionLine counts={status.excludedTotals} scope="this search" />
+                  Nothing is broadened automatically.
+                </EmptyState>
+                <BroadenActions counts={status.excludedTotals} allowUnverified={job.request.geography.allowUnverified} fewResults={false}
+                  onIncludeUnverified={() => rerun({ ...job.request, geography: { ...job.request.geography, allowUnverified: true } })}
+                  onEdit={() => onEditSearch(job.request)} />
+              </>
+            ))}
         </section>
       )}
 

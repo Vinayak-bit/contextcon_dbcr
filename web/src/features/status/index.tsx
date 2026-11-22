@@ -25,12 +25,14 @@ export function crustdataChip(s: AppStatus): { text: string; tone: Tone } {
   return { text: 'Sign-in required', tone: 'warning' };
 }
 
-/** AI chip text for the active engines. */
+/** AI chip text from the active ranker (Jev is the default engine; see docs/RANKING.md). */
 export function aiChip(s: AppStatus): { text: string; tone: Tone } {
-  if (s.llm.enabled && s.jev.enabled) return { text: 'DeepSeek + Jev (hybrid)', tone: 'accent' };
-  if (s.llm.enabled) return { text: 'DeepSeek', tone: 'accent' };
-  if (s.jev.enabled) return { text: 'Jev', tone: 'accent' };
-  return { text: 'Heuristic (no AI keys)', tone: 'neutral' };
+  switch (s.ranker) {
+    case 'jev': return { text: 'Ranking: Jev', tone: 'accent' };
+    case 'llm': return { text: 'Ranking: DeepSeek', tone: 'accent' };
+    case 'hybrid': return { text: 'Hybrid', tone: 'accent' };
+    default: return { text: 'Heuristic (no AI keys)', tone: 'neutral' };
+  }
 }
 
 export function ConnectionStatus({ status, onStatusChange }: ConnectionStatusProps) {
@@ -80,7 +82,8 @@ export function ConnectionStatus({ status, onStatusChange }: ConnectionStatusPro
   const cd = crustdataChip(status);
   const ai = aiChip(status);
   const connected = c.connected || c.state === 'connected';
-  const canConnect = c.mode !== 'sample' && !connected && (c.state === undefined || c.state === 'disconnected' || c.state === 'needs_auth' || c.state === 'error') && c.auth !== 'api_key' && c.auth !== 'missing_key';
+  // Brief: offer Connect when state is disconnected|needs_auth|error and auth is oauth (MCP without an API key).
+  const canConnect = !connected && c.auth === 'oauth' && (c.state === undefined || c.state === 'disconnected' || c.state === 'needs_auth' || c.state === 'error');
   const canDisconnect = connected && c.auth === 'oauth';
 
   const connect = async () => {
@@ -115,7 +118,7 @@ export function ConnectionStatus({ status, onStatusChange }: ConnectionStatusPro
     <div className="st-root" ref={root}>
       <button type="button" className="st-trigger" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen((o) => !o)} title="Connection and AI engine details">
         <span className={`st-chip st-chip--${cd.tone}`}><span className="st-dot" aria-hidden /><span className="st-prefix">Crustdata: </span>{waiting ? 'Waiting for sign-in…' : cd.text}</span>
-        <span className={`st-chip st-chip--${ai.tone} st-chip--ai`}>AI: {ai.text}</span>
+        <span className={`st-chip st-chip--${ai.tone} st-chip--ai`}>{ai.text}</span>
       </button>
       {canConnect && !open && (
         <Button size="sm" variant="secondary" loading={busy || waiting} onClick={connect} className="st-connect-inline">Connect Crustdata</Button>
@@ -147,9 +150,9 @@ export function ConnectionStatus({ status, onStatusChange }: ConnectionStatusPro
           <section>
             <h3>AI engines</h3>
             <dl className="st-dl">
-              <dt>Ranking</dt><dd>{ai.text}</dd>
-              <dt>DeepSeek</dt><dd>{status.llm.enabled ? <>On · <span className="st-mono">{status.llm.model}</span> / <span className="st-mono">{status.llm.fastModel}</span></> : 'Off (no key)'}</dd>
-              <dt>Jev</dt><dd>{status.jev.enabled ? <>On · <span className="st-mono">{status.jev.model}</span></> : 'Off (no key)'}</dd>
+              <dt>Ranking</dt><dd>{ai.text.replace(/^Ranking: /, '')}</dd>
+              <dt>Jev</dt><dd>{status.jev.enabled ? <>On · scores candidates · <span className="st-mono">{status.jev.model}</span></> : 'Off (no key)'}</dd>
+              <dt>DeepSeek</dt><dd>{status.llm.enabled ? <>On · understanding & evidence{status.ranker === 'llm' ? ' + ranking' : ''} · <span className="st-mono">{status.llm.model}</span> / <span className="st-mono">{status.llm.fastModel}</span></> : 'Off (no key)'}</dd>
             </dl>
           </section>
           {message && <p className="st-message" role="status">{message}</p>}

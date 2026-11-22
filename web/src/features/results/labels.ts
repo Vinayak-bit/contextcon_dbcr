@@ -65,10 +65,11 @@ export function geoLabel(geo: GeoCheck | undefined, kind: 'individual' | 'organi
   return { text: 'Worldwide', tone: 'neutral' };
 }
 
+/** Jev is the default ranking engine; DeepSeek ranks only as a fallback (docs/RANKING.md). */
 export const RANKER_LABELS: Record<RankerEngine, string> = {
-  hybrid: 'Hybrid — DeepSeek judge + Jev',
+  jev: 'Jev',
   llm: 'DeepSeek judge',
-  jev: 'Jev reranker',
+  hybrid: 'Hybrid — Jev + DeepSeek judge',
   heuristic: 'Heuristic (no AI keys)',
 };
 
