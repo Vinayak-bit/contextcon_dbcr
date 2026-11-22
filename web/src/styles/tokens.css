@@ -1,52 +1,91 @@
-/* Design tokens — owned by Laptop 4. Use these variables everywhere; don't hard-code colors. */
+/* Design tokens — the Overlap design system (source of truth: the overlap-landing.html prototype).
+   Use these variables everywhere; page code never hard-codes colours, radii, shadows or font sizes.
+   Legacy names from Phase 0 (--text, --border, --radius …) are kept as aliases of the new tokens
+   so older code keeps working. Default theme is light regardless of OS; dark comes only from the
+   footer toggle, which sets <html data-theme="dark"> before paint (see web/index.html). */
 :root {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', Menlo, Consolas, monospace;
-
-  /* surfaces & text */
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --surface-2: #f1f3f6;
-  --surface-3: #e8ebf0;
-  --border: #dde1e7;
-  --border-strong: #c5cbd4;
-  --text: #171a1f;
-  --text-2: #4a5160;
-  --text-3: #6f7685;
-  --text-on-accent: #ffffff;
-
-  /* accent & semantic */
+  /* ---- brand & colour ---- */
   --accent: #4c6ef5;
-  --accent-hover: #3b5bdb;
-  --accent-soft: #edf2ff;
-  --accent-border: #bac8ff;
-  --success: #2b8a3e;
-  --success-soft: #ebfbee;
-  --warning: #b35c00;
-  --warning-soft: #fff4e6;
+  --accent-strong: #3b5bdb;
+  --accent-strong-hover: #364fc7;
+  --accent-ink: #3b5bdb;
+  --teal: #12b886;
+  --teal-ink: #087f5b;
+  --violet: #7950f2;
+  /* the same brand colours as r,g,b triplets, for rgba(var(--rgb-x), a) tints */
+  --rgb-accent: 76, 110, 245;
+  --rgb-violet: 121, 80, 242;
+  --rgb-teal: 18, 184, 134;
+
+  --bg: #ffffff;
+  --bg-2: #f6f7fa;
+  --surface: #ffffff;
+  --ink: #14171f;
+  --ink-2: #454c5c;
+  --ink-3: #5f6779;
+  --line: #e5e8ef;
+  --line-2: #d5d9e3;
+  --warn: #b35c00;
+  --warn-bg: #fff4e6;
   --danger: #c92a2a;
-  --danger-soft: #fff5f5;
-  --info: #1971c2;
-  --info-soft: #e7f5ff;
-  --sample: #7048e8;
-  --sample-soft: #f3f0ff;
+  --danger-bg: #fff5f5;
+  --on-accent: #ffffff;
 
-  /* score scale (0–100) */
-  --score-high: #2f9e44;
-  --score-mid: #f59f00;
-  --score-low: #adb5bd;
+  /* tints derived from the brand (chips, selected states) */
+  --accent-tint: color-mix(in srgb, var(--accent) 9%, transparent);
+  --accent-tint-2: color-mix(in srgb, var(--accent) 18%, transparent);
+  --accent-edge: color-mix(in srgb, var(--accent) 28%, transparent);
+  --teal-tint: color-mix(in srgb, var(--teal) 12%, transparent);
+  --violet-tint: color-mix(in srgb, var(--violet) 10%, transparent);
+  --scrim: rgba(10, 12, 16, .45);
 
-  /* shape & depth */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --radius-pill: 999px;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 4px 12px rgba(16, 24, 40, 0.05);
-  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.16);
-  --focus-ring: 0 0 0 3px rgba(76, 110, 245, 0.35);
+  /* ---- shape & depth (LOW radii everywhere; nothing is pill-shaped) ---- */
+  --r-xs: 4px;
+  --r-sm: 5px;
+  --r: 6px;
+  --r-seg: 7px;
+  --r-lg: 8px;
+  --r-btn: 6px;
+  --sh-1: 0 1px 2px rgba(20, 23, 31, .04), 0 1px 1px rgba(20, 23, 31, .03);
+  --sh-2: 0 1px 2px rgba(20, 23, 31, .04), 0 4px 12px rgba(20, 23, 31, .05), 0 16px 40px -12px rgba(20, 23, 31, .10);
+  --sh-3: 0 1px 2px rgba(20, 23, 31, .05), 0 12px 32px rgba(20, 23, 31, .12), 0 32px 64px -24px rgba(20, 23, 31, .22);
+  --sh-primary: 0 1px 0 rgba(255, 255, 255, .18) inset, 0 6px 18px -6px rgba(59, 91, 219, .6);
+  --ring-input: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  --gradient-brand: linear-gradient(90deg, var(--accent), var(--teal));
 
-  /* spacing scale */
+  /* ---- type ---- */
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-h1: clamp(40px, 5.6vw, 70px);
+  --fs-h2: clamp(30px, 3.6vw, 44px);
+  --fs-h3: 19px;
+  --fs-h3-lg: 21px;
+  --fs-h3-xl: 24px;
+  --fs-hero-sub: 19px;
+  --fs-lede: 18px;
+  --fs-body: 17px;
+  --fs-ui: 15.5px;      /* buttons, tabs */
+  --fs-body-sm: 15px;
+  --fs-small: 14.5px;
+  --fs-caption: 13.5px;
+  --fs-mono: 12.5px;    /* evidence ids, weights, counts, timestamps */
+  --fs-micro: 11.5px;
+  --lh-body: 1.6;
+  --lh-tight: 1.12;
+  --measure: 68ch;
+
+  /* ---- motion ---- */
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --dur: 280ms;
+  --dur-fast: 200ms;
+  --dur-slow: 400ms;
+
+  /* ---- layout ---- */
+  --content: 1120px;
+  --gutter: 24px;
+  --section: 136px;
+  --header-height: 64px;
+  --blend: multiply;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -54,38 +93,93 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
+  --space-8: 64px;
 
-  --content-width: 1120px;
-  --header-height: 60px;
+  /* ---- dark band & footer palette (fixed, theme-independent) ---- */
+  --navy: #0b1430;
+  --navy-2: #0d1838;
+  --navy-footer-dark: #080d1f;
+  --band-ink: #f3f5fb;
+  --band-ink-2: #aab6d6;
+  --band-ink-3: #8593b8;
+  --band-muted-blue: #8ea2d8;
+  --band-kicker: #63e6be;
+  --band-line: rgba(170, 186, 230, .16);
+  --band-line-2: rgba(170, 186, 230, .26);
+  --band-card: rgba(255, 255, 255, .035);
+  --band-grid: rgba(170, 186, 230, .08);
+  --band-note: rgba(255, 255, 255, .9);
+  --band-note-shadow: 0 1px 2px rgba(11, 20, 48, .35);
+
+  /* ---- semantic aliases ---- */
+  --success: var(--teal-ink);
+  --success-soft: var(--teal-tint);
+  --warning: var(--warn);
+  --warning-soft: var(--warn-bg);
+  --danger-soft: var(--danger-bg);
+  --info: var(--accent-ink);
+  --info-soft: var(--accent-tint);
+  --sample: var(--violet);
+  --sample-soft: var(--violet-tint);
+  --score-high: var(--teal);
+  --score-mid: #f59f00;
+  --score-low: var(--line-2);
+
+  /* ---- legacy aliases (Phase 0 names) ---- */
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
+  --surface-2: var(--bg-2);
+  --surface-3: var(--line);
+  --border: var(--line);
+  --border-strong: var(--line-2);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --text-3: var(--ink-3);
+  --text-on-accent: var(--on-accent);
+  --accent-hover: var(--accent-strong-hover);
+  --accent-soft: var(--accent-tint);
+  --accent-border: var(--accent-edge);
+  --radius-sm: var(--r-sm);
+  --radius: var(--r);
+  --radius-lg: var(--r-lg);
+  --radius-pill: var(--r);
+  --shadow-sm: var(--sh-1);
+  --shadow: var(--sh-2);
+  --shadow-lg: var(--sh-3);
+  --focus-ring: var(--ring-input);
+  --content-width: var(--content);
+
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #0f1115;
-    --surface: #171a21;
-    --surface-2: #1e222b;
-    --surface-3: #262b36;
-    --border: #2c323d;
-    --border-strong: #3b4250;
-    --text: #e8eaef;
-    --text-2: #b3b9c5;
-    --text-3: #8a91a0;
-    --accent: #748ffc;
-    --accent-hover: #91a7ff;
-    --accent-soft: #1d2340;
-    --accent-border: #364fc7;
-    --success: #69db7c;
-    --success-soft: #13261a;
-    --warning: #ffc078;
-    --warning-soft: #2b1f10;
-    --danger: #ff8787;
-    --danger-soft: #2c1517;
-    --info: #74c0fc;
-    --info-soft: #102434;
-    --sample: #b197fc;
-    --sample-soft: #221a3a;
-    --score-low: #5c6370;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
-  }
+:root[data-theme='dark'] {
+  --accent: #5c7cfa;
+  --accent-strong: #4263eb;
+  --accent-strong-hover: #3b5bdb;
+  --accent-ink: #91a7ff;
+  --teal: #20c997;
+  --teal-ink: #63e6be;
+  --violet: #9775fa;
+  --bg: #0c0e13;
+  --bg-2: #11141b;
+  --surface: #141821;
+  --ink: #eef0f5;
+  --ink-2: #b7bdcc;
+  --ink-3: #9299ab;
+  --line: #232834;
+  --line-2: #2f3542;
+  --warn: #ffc078;
+  --warn-bg: #2b2010;
+  --danger: #ff8787;
+  --danger-bg: #2c1517;
+  --sh-1: 0 1px 2px rgba(0, 0, 0, .3);
+  --sh-2: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35), 0 24px 48px -16px rgba(0, 0, 0, .5);
+  --sh-3: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 40px rgba(0, 0, 0, .5), 0 32px 64px -24px rgba(0, 0, 0, .6);
+  --scrim: rgba(0, 0, 0, .6);
+  --score-mid: #fab005;
+  --blend: screen;
+  color-scheme: dark;
 }
+
+@media (max-width: 880px) { :root { --section: 96px; } }
+@media (max-width: 560px) { :root { --gutter: 18px; --section: 80px; --fs-body: 16.5px; --fs-hero-sub: 17.5px; } }
