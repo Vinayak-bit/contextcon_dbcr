@@ -216,3 +216,23 @@ search. Backend counting was correct (a finished live search: 12 LLM calls, 47 J
 `EnginesFooter` in `web/src/features/results/Summary.tsx` (Laptop 2's folder; pull `main`) now explains a zero:
 "none yet (starts at evidence extraction / ranking)" while running, "not used" when the key isn't configured, and
 "none (no candidates passed the filters)" when nothing was ranked. The topic check isn't counted (tooltip says so).
+
+## Review 9 (2026-11-22) — Laptop 1 outreach email drafts
+
+`outreach-email` at c7ea6ad (one commit by Laptop 1, on top of `main` 404b267). **Approved and merged at the owner's
+request.** Adds "Draft email" on every result: choose a purpose (meeting, research internship, internship, collaboration,
+other) and optional details, then get an editable subject and message, with the public sources it used. Compose only:
+**Copy draft** or **Open in email app** (a `mailto:` link, shown only with one valid address). Work emails found through
+"View work email" prefill the To field; sample emails never do. Server: `server/llm/outreach.js` and
+`POST /search/:id/candidates/:cid/outreach-draft` (documented in `docs/API.md`).
+
+Checked by Laptop 4:
+- Grounding: DeepSeek only sees linked evidence for the candidate (≤12 items), must return `sourceIds` from that set,
+  and is told not to infer titles, openings, willingness or credentials. Otherwise a fixed template quotes one
+  evidence item. Nothing is sent from the server.
+- `npm run check` passes (69 tests, 4 new). Live: a collaboration draft for a real result cited two of the person's
+  papers with Scholar links, acknowledged limited overlap with the topic, and signed with the user's name.
+- Ownership: this commit edits Laptop 2 (`web/src/features/results/`) and Laptop 4 files (`server/routes/search.js`,
+  `web/src/api/types.ts`, `client.ts`). Accepted because the owner asked for the merge. Laptop 2: pull `main`.
+  Next time, request contract changes through `docs/CHANGE_REQUESTS.md` first.
+- Not changed: draft calls aren't added to the search's "LLM calls" counter, which covers building results only.
