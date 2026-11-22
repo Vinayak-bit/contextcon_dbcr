@@ -6,22 +6,34 @@ import * as z from 'zod/v4';
 import { normText, uniq } from '../util.js';
 
 const MAX_QUERIES = 2;
+const SCHOLAR_UNAVAILABLE = 'Academic paper search is temporarily unavailable; results come from profile search.';
+const SCHOLAR_NOT_ON_PLAN = 'Academic paper search is not enabled on this Crustdata plan; results come from profile search.';
 
-/** Run web searches (1 credit per page); errors become warnings and are skipped. */
+/**
+ * Run web searches (1 credit per page); errors are skipped. Each kind of failure produces at most
+ * one user-facing warning per call (not one per query); raw error messages go to the progress log.
+ * Scholar sources rejected by Crustdata (e.g. 400 "Source temporarily disabled") become one friendly warning.
+ */
 async function webSearch(ctx, queries, sources) {
   const list = uniq(queries).slice(0, MAX_QUERIES);
   if (!list.length) return [];
+  const scholar = sources.some((s) => String(s).startsWith('scholar'));
   const results = await ctx.crustdata.batch('webSearch', list.map((query) => ({ query, sources })), { sample: ctx.sample, meter: ctx.meter });
   const out = [];
+  const warn = new Set();
   results.forEach((r, i) => {
     if (r instanceof Error) {
-      if (r.status === 402 || r.type === 'insufficient_credits') ctx.warnings.push('Crustdata credits ran out during academic web search.');
-      else if (r.status === 403) ctx.warnings.push('Academic web search is not enabled on this Crustdata plan; results come from profile search only.');
-      else ctx.warnings.push(`Web search failed for "${list[i]}": ${r.message}`);
+      ctx.log(`Web search (${sources.join(', ')}) failed for "${list[i]}": ${r.message}`);
+      if (r.status === 402 || r.type === 'insufficient_credits') warn.add('Crustdata credits ran out during academic web search.');
+      else if (scholar && r.status === 403) warn.add(SCHOLAR_NOT_ON_PLAN);
+      else if (scholar && (r.status === 400 || r.status === 404 || r.status >= 500 || /disabled|unavailable/i.test(r.message))) warn.add(SCHOLAR_UNAVAILABLE);
+      else if (r.status === 403) warn.add('Web search is not enabled on this Crustdata plan; lab discovery was skipped.');
+      else warn.add(`Web search failed: ${r.message}`);
       return;
     }
     for (const item of r.data?.results || []) out.push({ item, retrievedAt: r.retrievedAt, transport: r.transport, query: list[i] });
   });
+  warn.forEach((w) => ctx.warnings.push(w));
   return out;
 }
 

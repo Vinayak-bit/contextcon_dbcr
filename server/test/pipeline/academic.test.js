@@ -30,6 +30,15 @@ test('findAcademicAuthors turns gateway errors into warnings', async () => {
   assert.equal(ctx.warnings.length, 1);
 });
 
+test('disabled Scholar sources give one friendly warning, not a raw error per query', async () => {
+  const err = Object.assign(new Error('Source temporarily disabled: scholar-articles'), { status: 400 });
+  const logs = [];
+  const ctx = { ...ctxWith(err), log: (m) => logs.push(m) };
+  assert.deepEqual(await findAcademicAuthors(ctx, ['kv cache', 'paged attention']), []);
+  assert.deepEqual(ctx.warnings, ['Academic paper search is temporarily unavailable; results come from profile search.']);
+  assert.equal(logs.length, 2, 'raw messages still go to the progress log');
+});
+
 test('findLabs heuristic extracts lab name and parent, skips non-lab pages', async () => {
   const ctx = ctxWith(() => [
     { title: 'Efficient ML Systems Lab - Westbrook University', url: 'https://w/lab', snippet: 'We build fast inference.' },

@@ -45,19 +45,48 @@ export function titleFilter(individualTypes, customDiscipline) {
   return { op: 'or', conditions };
 }
 
+const STUDENT_TITLE = /\b(student|undergraduate)\b/i;
+const DOCTORAL_TITLE = /\b(phd|doctoral)\b/i;
+const DOCTORAL_DEGREE = /\b(ph\.? ?d|doctor|doctoral|doctorate|dphil)\b/i;
+
+/**
+ * Current enrollments recorded on the profile: schools whose end year is this year or later,
+ * with the degree read from the matching education evidence ("Education: Ph.D., CS at X (2027)").
+ */
+function enrollments(c) {
+  const year = new Date().getFullYear();
+  const edu = (c.evidence || []).filter((e) => e.kind === 'education').map((e) => e.text || '');
+  return (c.meta?.schools || [])
+    .filter((s) => s.school && Number(s.end_year) >= year)
+    .map((s) => {
+      const text = edu.find((t) => t.includes(` at ${s.school}`)) || '';
+      const degree = text.replace(/^Education:\s*/, '').split(` at ${s.school}`)[0] || '';
+      return { school: s.school, doctoral: DOCTORAL_DEGREE.test(degree) };
+    });
+}
+
 /**
  * Re-check the candidate's role against the selected types.
- * Current titles are authoritative; the headline is used only when no title is recorded.
- * The custom discipline may also match the headline (it is often descriptive, e.g. "RF engineer").
+ * Only a recorded **current role** can verify a type: the headline alone never does (an MS student
+ * with the headline "AI/ML Engineer" is not a working engineer). With no current role, the person is
+ * `unverified`, except that a recorded current enrollment verifies student types (and PhD types when
+ * the degree is doctoral). With a current role, the custom discipline may also match the headline
+ * (it is often descriptive, e.g. title "Engineer II", headline "RF engineer").
  * @returns {{status:'match'|'mismatch'|'unverified', matched:string[]}}
  */
 export function matchRoles(c, individualTypes, customDiscipline) {
-  const titles = uniq([c.current_role, ...(c.meta?.current_roles || []).map((r) => r.title)]).join(' | ');
-  const headline = c.headline || '';
-  const roleText = titles || headline;
-  if (!roleText) return { status: 'unverified', matched: [] };
-  const matched = (individualTypes || []).filter((t) => (t.titles || []).some((p) => phraseHit(p, roleText))).map((t) => t.id);
-  if (customDiscipline && (phraseHit(customDiscipline, roleText) || phraseHit(customDiscipline, headline))) matched.push('custom');
+  const titles = uniq([c.current_role, ...(c.meta?.current_roles || []).map((r) => r.title)].map((t) => String(t || '').trim()));
+  const types = individualTypes || [];
+  if (!titles.length) {
+    const enrolled = enrollments(c);
+    if (!enrolled.length) return { status: 'unverified', matched: [] };
+    const doctoral = enrolled.some((e) => e.doctoral);
+    const matched = types.filter((t) => (t.titles || []).some((p) => STUDENT_TITLE.test(p) || (doctoral && DOCTORAL_TITLE.test(p)))).map((t) => t.id);
+    return matched.length ? { status: 'match', matched } : { status: 'unverified', matched: [] };
+  }
+  const hit = (p) => titles.some((t) => phraseHit(p, t));
+  const matched = types.filter((t) => (t.titles || []).some(hit)).map((t) => t.id);
+  if (customDiscipline && (hit(customDiscipline) || phraseHit(customDiscipline, c.headline || ''))) matched.push('custom');
   return { status: matched.length ? 'match' : 'mismatch', matched };
 }
 

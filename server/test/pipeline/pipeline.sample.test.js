@@ -355,3 +355,36 @@ test('organizations with unknown type or size count as unverified (relaxable), n
   assert.equal(relaxed.candidates[0].meta.orgTypeStatus, 'unverified');
   assert.equal(relaxed.candidates[0].meta.sizeStatus, 'unverified');
 });
+
+/* ------------------------------------------------------------------ */
+/* Review 4 (first live run)                                           */
+/* ------------------------------------------------------------------ */
+test('people with no current role are not matched on headline alone (excluded as unverified role)', async () => {
+  const noRole = (i) => ({ ...profile(i), basic_profile: { ...profile(i).basic_profile, current_title: '', headline: 'AI/ML Engineer' }, experience: { employment_details: { current: [] } } });
+  const gw = stubGateway((op, body) => {
+    if (op === 'personSearch') return { profiles: isSecondPull(body) ? [] : [noRole(1), profile(2)], next_cursor: null };
+    if (op === 'personEnrich') return body.professional_network_profile_urls.map((u) => { const i = Number(u.split('/').pop()); return { matched_on: u, matches: [{ confidence_score: 1, person_data: i === 1 ? noRole(1) : profile(2) }] }; });
+    return { results: [] };
+  });
+  const req = { ...base, category: 'student', target: 'individuals', individualTypes: ['pro_engineers'], geography: { option: 'worldwide', allowUnverified: false, preferProximity: false } };
+  const r = await retrieveIndividualsPage(makeCtx(req, { gateway: gw, limits: { academicWebSearch: false } }), { state: {}, page: 1 });
+  assert.deepEqual(r.candidates.map((c) => c.name), ['Person 2']);
+  assert.equal(r.excluded.unverified_role, 1);
+  const relaxed = await retrieveIndividualsPage(makeCtx({ ...req, geography: { ...req.geography, allowUnverified: true } }, { gateway: gw, limits: { academicWebSearch: false } }), { state: {}, page: 1 });
+  assert.equal(relaxed.candidates.find((c) => c.name === 'Person 1').meta.roleStatus, 'unverified');
+});
+
+test('scholar sources disabled: the page still builds with a single friendly warning', async () => {
+  const gw = stubGateway((op, body) => {
+    if (op === 'webSearch') return err(400, 'Source temporarily disabled');
+    if (op === 'personSearch') return { profiles: isSecondPull(body) ? [] : [profile(1)], next_cursor: null };
+    if (op === 'personEnrich') return [];
+    return { results: [] };
+  });
+  const req = { ...base, target: 'individuals', individualTypes: ['research_engineers'], geography: { option: 'worldwide', allowUnverified: false, preferProximity: false } };
+  const ctx = makeCtx(req, { gateway: gw });
+  const r = await retrieveIndividualsPage(ctx, { state: {}, page: 1 });
+  assert.equal(r.candidates.length, 1);
+  assert.ok(gw.calls.some((c) => c.op === 'webSearch' && c.body.sources.includes('scholar-articles')));
+  assert.deepEqual(ctx.warnings, ['Academic paper search is temporarily unavailable; results come from profile search.']);
+});
