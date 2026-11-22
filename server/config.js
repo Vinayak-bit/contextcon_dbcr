@@ -52,6 +52,8 @@ export const config = {
     baseUrl: (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/$/, ''),
     // Topic validation + project-spec extraction (one call per search).
     model: process.env.LLM_MODEL || 'deepseek-v4-pro',
+    // Reasoning for topic validation: none (~6 s) | low (~12–20 s) | high | max.
+    topicReasoning: process.env.LLM_TOPIC_REASONING || 'none',
     // Evidence normalization + LLM-as-judge (one call per candidate).
     fastModel: process.env.LLM_FAST_MODEL || 'deepseek-flash',
     // Reasoning for the judge: none | low | high | max. Measured: none ≈ 4 s/candidate, low ≈ 16 s/candidate.

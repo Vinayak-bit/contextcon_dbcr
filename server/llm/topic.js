@@ -64,7 +64,7 @@ ${background ? `User background: ${background}\n` : ''}Project description:
 Links provided: ${links.length ? links.join(', ') : 'none'}
 Verified professional profile: ${profileSummary(profile)}`;
   try {
-    const out = await chatJson({ system: SYSTEM, user, schema: TopicSchema, model: config.llm.model, reasoning: 'low', maxTokens: 3000, usage });
+    const out = await chatJson({ system: SYSTEM, user, schema: TopicSchema, model: config.llm.model, reasoning: config.llm.topicReasoning, maxTokens: 3000, usage });
     if (!out.spec) out.spec = heuristicTopic(text, profile).spec;
     out.spec = cleanSpec(out.spec, text);
     out.engine = 'llm';

@@ -51,6 +51,13 @@ Done on `laptop-4/api-integration`:
   ~6 s with Jev (was ~40 s for 16 candidates).
 - Jev made the default ranker. `server/scripts/benchmark-rankers.js` kept for later evaluation on **real** searches only.
 
+- Topic validation ~6 s (was 12–20 s): `LLM_TOPIC_REASONING=none` on `deepseek-v4-pro`, same classifications in tests.
+- Crustdata MCP verified with the real server (2026-11-22): tool names match discovery, the execute envelope
+  (`{ok, exec_id, value}`) unwraps correctly, and a dry run of the exact sandbox program passed with real tool names and
+  request shapes. The sandbox no longer truncates result lists above 60 rows. The X handle filter was fixed
+  (`social_handles.twitter_handle`). Laptop 3's brief now has a "Verified against the live Crustdata MCP" section
+  (`mode: 'exact'`, `fields` whitelists, cursor rules, blocked fields).
+
 Known issues:
 - Sample data can produce two different fictional people with the same name (different ids). That's expected.
 
@@ -66,8 +73,9 @@ completed. Do that as soon as access exists.
    from enrich, links flow (LinkedIn → identify, Scholar → identify `research_profile_urls`, GitHub → search
    `dev_platform_profiles.login`, X → search `social_handles.twitter_identifier.slug`, website → `/web/enrich/live` +
    DeepSeek summary as context).
-3. Live Crustdata smoke test over MCP (API key and OAuth). Confirm discovered tool names and parameter shapes, adjust
-   `mcp.js` if the execute result envelope differs, and record the credits used per search.
+3. Live run **through the app itself**: needs the app's own Crustdata auth (a `CRUSTDATA_API_KEY` in `.env`, or the
+   OAuth "Connect Crustdata" sign-in). Tool names, shapes and the envelope are already verified. Run one small search
+   (`CRUSTDATA_SEARCH_LIMIT=10`, `CRUSTDATA_ENRICH_PER_PAGE=5`) and record the credits used.
 4. README for humans (setup, keys, transports, architecture, costs).
 5. Process `docs/CHANGE_REQUESTS.md` entries quickly. Others are blocked on you for contract changes.
 

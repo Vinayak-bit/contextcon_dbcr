@@ -31,14 +31,15 @@ const OP_PATTERNS = {
 const DEFAULT_NAMES = {
   personSearch: 'person_search', personEnrich: 'person_enrich', personIdentify: 'person_identify',
   companySearch: 'company_search', companyEnrich: 'company_enrich', companyIdentify: 'company_identify',
-  webSearch: 'web_search_live', webFetch: 'web_fetch_live',
+  webSearch: 'web_search_live', webFetch: 'web_enrich_live',
 };
 
 // Runs inside Crustdata's sandbox (plain JS, no types). Drops bulky fields we never use.
 const SANDBOX_PROGRAM = `// model query: batch of Crustdata API calls for expert discovery (search, identify, enrich)
-const DROP = new Set(['metrics_timeseries','citations_timeseries','co_authors','social_posts','profile_picture_permalink','headcount_timeseries','followers_timeseries','web_traffic','employee_reviews','seo','news','job_openings','reviews','software_reviews','assessment']);
+const DROP = new Set(['metrics_timeseries','citations_timeseries','timeseries','co_authors','social_posts','profile_picture_permalink','logo_permalink','by_role_absolute','by_role_percent','by_region_absolute','by_region_percent','web_traffic','employee_reviews','seo','news','job_openings','reviews','software_reviews','assessment','competitors','people','market_intel','public_launches']);
 function shrink(v, depth) {
-  if (Array.isArray(v)) return v.slice(0, depth > 3 ? 12 : 60).map((x) => shrink(x, depth + 1));
+  // Keep every result row (depth ≤ 3: profiles/companies/matches); trim deep lists (repos, articles, past roles).
+  if (Array.isArray(v)) return v.slice(0, depth > 3 ? 12 : 1000).map((x) => shrink(x, depth + 1));
   if (v && typeof v === 'object') {
     const out = {};
     for (const k of Object.keys(v)) {
