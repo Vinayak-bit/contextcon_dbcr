@@ -181,11 +181,12 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
             <>
               <div className="rs-page-head">
                 <span><strong>{TAB_LABELS[tab]}</strong> · Page {page.page} · {page.candidates.length} result{page.candidates.length === 1 ? '' : 's'}</span>
-                <ExclusionLine counts={page.excluded} />
+                <ExclusionLine counts={page.excluded} tab={tab} />
               </div>
               {page.page >= 2 && page.note && <Notice tone="info">{page.note}</Notice>}
               <BroadenActions
                 counts={sumCounts(page.excluded, status.excludedTotals)}
+                tab={tab}
                 allowUnverified={job.request.geography.allowUnverified}
                 fewResults={page.page === 1 && page.candidates.length < FEW_RESULTS && !page.hasMore}
                 onIncludeUnverified={() => rerun({ ...job.request, geography: { ...job.request.geography, allowUnverified: true } })}
@@ -194,7 +195,7 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
               {page.candidates.length === 0 ? (
                 <EmptyState title="No matches on this page" action={<Button variant="secondary" onClick={() => onEditSearch(job.request)}>Change geography or types</Button>}>
                   Every candidate found was excluded by your constraints.{' '}
-                  <ExclusionLine counts={page.excluded} />
+                  <ExclusionLine counts={page.excluded} tab={tab} />
                   Nothing is broadened automatically.
                 </EmptyState>
               ) : (
@@ -218,10 +219,10 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
             : (
               <>
                 <EmptyState title="No matches for these constraints" action={<Button variant="secondary" onClick={() => onEditSearch(job.request)}>Change geography or types</Button>}>
-                  <ExclusionLine counts={status.excludedTotals} scope="this search" />
+                  <ExclusionLine counts={status.excludedTotals} tab={tab} scope="this search" />
                   Nothing is broadened automatically.
                 </EmptyState>
-                <BroadenActions counts={status.excludedTotals} allowUnverified={job.request.geography.allowUnverified} fewResults={false}
+                <BroadenActions counts={status.excludedTotals} tab={tab} allowUnverified={job.request.geography.allowUnverified} fewResults={false}
                   onIncludeUnverified={() => rerun({ ...job.request, geography: { ...job.request.geography, allowUnverified: true } })}
                   onEdit={() => onEditSearch(job.request)} />
               </>
