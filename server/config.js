@@ -52,11 +52,14 @@ export const config = {
     baseUrl: (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/$/, ''),
     // Topic validation + project-spec extraction (one call per search).
     model: process.env.LLM_MODEL || 'deepseek-v4-pro',
+    // Reasoning for topic validation: none (~6 s) | low (~12–20 s) | high | max.
+    topicReasoning: process.env.LLM_TOPIC_REASONING || 'none',
     // Evidence normalization + LLM-as-judge (one call per candidate).
     fastModel: process.env.LLM_FAST_MODEL || 'deepseek-flash',
-    // Reasoning for the judge: none | low | high | max
-    judgeReasoning: process.env.LLM_JUDGE_REASONING || 'low',
-    concurrency: num(process.env.LLM_CONCURRENCY, 8),
+    // Reasoning for the judge: none | low | high | max. Measured: none ≈ 4 s/candidate, low ≈ 16 s/candidate.
+    judgeReasoning: process.env.LLM_JUDGE_REASONING || 'none',
+    // Max DeepSeek requests in flight (account limit is far higher).
+    concurrency: num(process.env.LLM_CONCURRENCY, 16),
     get enabled() { return Boolean(this.apiKey); },
   },
 
@@ -66,12 +69,12 @@ export const config = {
     url: process.env.JEV_API_URL || 'https://api.typesafe.ai/v1/systemone',
     // Pin a version so scores stay comparable across searches.
     model: process.env.JEV_MODEL || 'jev-1.14.0',
-    concurrency: num(process.env.JEV_CONCURRENCY, 6),
+    concurrency: num(process.env.JEV_CONCURRENCY, 8),
     get enabled() { return Boolean(this.apiKey); },
   },
 
-  // auto | hybrid | llm | jev | heuristic
-  //   auto → hybrid when both DeepSeek and Jev keys are set, otherwise whichever is available.
+  // auto | jev | hybrid | llm | heuristic
+  //   auto (default) → Jev ranks (production decision, see docs/RANKING.md); DeepSeek judge only as fallback.
   ranker: (process.env.RANKER || 'auto').toLowerCase(),
   // Share of each Jev-covered criterion taken from Jev in hybrid mode (rest from the LLM judge).
   hybridJevWeight: num(process.env.HYBRID_JEV_WEIGHT, 0.5),

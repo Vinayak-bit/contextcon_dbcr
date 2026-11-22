@@ -35,7 +35,7 @@ Express API (server/index.js, server/routes/* — L4)
   │    │    geography.js, constraints.js, dedupe.js                          (L3)
   │    ├─ pipeline/normalize.js  Crustdata JSON → candidate + evidence ids   (L4, done)
   │    ├─ llm/extract.js     DeepSeek evidence extraction                    (L4, done)
-  │    └─ ranking/index.js   DeepSeek judge + Jev + deterministic score      (L4, done)
+  │    └─ ranking/index.js   Jev scoring + deterministic score (LLM fallback) (L4, done)
   └─ crustdata/index.js  gateway: MCP (Streamable HTTP) | REST | sample      (L4, done)
 ```
 
@@ -108,4 +108,4 @@ laptop's unfinished work:
 - [ ] Excluded-candidate counts are shown, and broadening needs an explicit click.
 - [ ] Sample mode is labelled. With Crustdata connected (key or OAuth), a real search completes
       and credits used are shown.
-- [ ] Ranking engine indicator shows hybrid (DeepSeek + Jev) when both keys are present.
+- [ ] Ranking engine indicator shows Jev (DeepSeek for understanding) when both keys are present.

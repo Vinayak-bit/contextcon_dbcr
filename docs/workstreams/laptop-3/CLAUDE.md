@@ -194,6 +194,45 @@ that condition, warn), 403 `permission_error` (gated fields/endpoints — degrad
 (stop, surface a warning), 404 on enrich/identify is already turned into an empty result. `crustdata.batch` returns
 `Error` objects in place — check each element.
 
+### Verified against the live Crustdata MCP (2026-11-22). These override anything above.
+
+Laptop 4 checked these with the real server (tool list, schemas, docs, and a dry run of the app's sandbox program):
+- **Ranked person search must send top-level `mode: 'exact'`** whenever you pass hard filters:
+  `{ search: { query, mode: 'hybrid' }, mode: 'exact', filters, limit, fields, cursor? }`. The default
+  `mode: 'managed'` OR-unions constraints it reads from the query text with your filters. That silently broadens the
+  user's hard constraints, which the spec forbids. `sorts` is rejected with `search`. `cursor` works, and changing
+  `mode` mid-pagination invalidates it.
+- **Always send `fields`** (it's a response whitelist). Without it, person search bills experience + education on every
+  result (+0.2 credits each). For the search stage use `['crustdata_person_id', 'basic_profile', 'social_handles', 'fit']`.
+  `basic_profile` has `current_title`, `headline` and `location`, which is enough for the prefilter. Add `experience`
+  (+0.1) only if you need current-employer checks (institute scope). `fit` is Crustdata's relevance tier for ranked
+  search (`strong` / `possible` / `weak`), so use it in the preliminary score.
+- **Research and engineering second pulls:** researchers match on `research_profiles.articles.title` /
+  `research_profiles.research_interests`, engineers on `dev_platform_profiles.all_languages` /
+  `dev_platform_profiles.all_topics` (hyphenated tags like `distributed-systems`). Use `in` on these, not `(.)`. They
+  cover under 1% of profiles, so run them as an **additional** pull and union it with the main pull, never as the only
+  pull. Filter-side cost: `research_profiles` 0.2 and `dev_platform_profiles` 0.8 per result.
+- **Categorical columns hold exact stored values:** current/past title, seniority, function category, company
+  `basic_info.industries`, `basic_info.company_type`, `funding.last_round_type`. A guessed value silently returns zero
+  rows. For titles keep using `(.)`. For industries and types, resolve values with the free `person_autocomplete` /
+  `company_autocomplete` tools (ask Laptop 4 to expose them through the gateway if you need them).
+- **Ranked company search returns ONE window of ≤100**: `cursor` and `sorts` are rejected and `next_cursor` is null.
+  For organization pages 2+, run a different query set (`spec.related_topics`, each selected type's `queryHint`) or a
+  filters-only search, which does support cursors. Always drop already-seen ids.
+- **Company search `fields`:** use `['crustdata_company_id', 'basic_info', 'locations']`. `locations` is free. Add
+  `headcount` (+0.2) only when a size filter is set; `taxonomy` costs 0.1. With no `fields` you get no premium groups.
+- **Enrich costs on this plan:** `person_enrich` costs 1/profile, +2 if `research_profiles` is delivered, +1 if
+  `dev_platform_profiles` is delivered. `company_enrich` costs 2/match. `company_identify` costs 0.2/match.
+  `person_identify` costs 1/match.
+- **Fields this plan blocks** (naming them in `fields` 403s the whole call, so never request them): person_enrich
+  `certifications`, `assessment`, `social_posts`, `recently_changed_jobs`, `experience.years_of_experience*`, `*.last_updated`.
+  person_search `years_of_experience*`, `basic_profile.first_name|last_name`. company_enrich `technographics`, `maps`,
+  `social_posts`, `hiring.recent_openings`. company_identify `headcount`, `locations`.
+- **Value formats:** person `basic_profile.location.country` takes a full English name ("United States"). Company
+  `locations.country` takes an ISO-3 code or a full name.
+- Handle lookups (used by Laptop 4's profile links): GitHub `dev_platform_profiles.login` (case-insensitive) and X
+  `social_handles.twitter_handle`.
+
 ## How to run & verify
 ```powershell
 npm install

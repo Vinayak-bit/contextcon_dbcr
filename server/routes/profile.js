@@ -150,12 +150,12 @@ profileRouter.post('/profile/links', requireUser, wrap(async (req, res) => {
   });
   const gh = b.github && handleFrom(b.github, 'github');
   if (gh) await tryCall('GitHub', async () => {
-    const r = await crustdata.call('personSearch', { filters: { field: 'dev_platform_profiles.login', type: '=', value: gh }, limit: 3, fields: ['basic_profile', 'social_handles', 'experience'] }, { sample });
+    const r = await crustdata.call('personSearch', { filters: { field: 'dev_platform_profiles.login', type: '=', value: gh }, limit: 3, fields: ['crustdata_person_id', 'basic_profile', 'social_handles'] }, { sample });
     (r.data?.profiles || []).forEach((p) => matches.push(remember(u.id, p, 'github_search', sample)));
   });
   const xh = b.x && handleFrom(b.x);
   if (xh) await tryCall('X', async () => {
-    const r = await crustdata.call('personSearch', { filters: { field: 'social_handles.twitter_identifier.slug', type: '=', value: xh.replace(/^@/, '') }, limit: 3, fields: ['basic_profile', 'social_handles', 'experience'] }, { sample });
+    const r = await crustdata.call('personSearch', { filters: { field: 'social_handles.twitter_handle', type: '=', value: xh.replace(/^@/, '') }, limit: 3, fields: ['crustdata_person_id', 'basic_profile', 'social_handles'] }, { sample });
     (r.data?.profiles || []).forEach((p) => matches.push(remember(u.id, p, 'x_search', sample)));
   });
   if (b.website) await tryCall('Website', async () => {
