@@ -40,7 +40,7 @@ export interface OnboardingAppProps {
   status: AppStatus | null;            // Crustdata/LLM status (null while loading)
   onMeChange(me: Me | null): void;     // call after login/logout/profile/category changes
   onSearchStarted(jobId: string, request: SearchRequest): void;  // after POST /api/search succeeds
-  editRequest?: SearchRequest | null;  // set when the user clicks "Edit search" on results:
+  editRequest?: SearchRequest | null;  // set when results sends the user back to change geography or types:
                                        // prefill the wizard from it and open the Summary step
 }
 export function OnboardingApp(props: OnboardingAppProps): JSX.Element;

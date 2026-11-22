@@ -160,7 +160,7 @@ export const PERSONAS = {
   student: {
     id: 'student',
     card: { title: 'Student', description: 'Discover mentors, project partners, researchers, and organizations working on your interests.' },
-    heading: 'Find people and organizations who can help bring your ideas to life.',
+    heading: 'Find the most relevant person or organization for your problem.',
     supporting: "Whether you're working on a research project, building an engineering prototype, developing software, or exploring a technical idea, discover people and organizations with relevant expertise.",
     describe: {
       question: 'What are you working on, or what technical topic interests you?',
@@ -174,7 +174,7 @@ export const PERSONAS = {
   professor: {
     id: 'professor',
     card: { title: 'Professor / Academic', description: 'Find researchers, students, industry experts, and organizations for research and technical collaboration.' },
-    heading: 'Discover researchers, technical collaborators, and organizations advancing your field.',
+    heading: 'Find the most relevant person or organization for your problem.',
     supporting: 'Find collaborators for new research, connect with industry experts, discover capable students, and identify institutions or companies working on complementary technologies.',
     describe: {
       question: 'What research question, engineering challenge, or technical project are you exploring?',
@@ -197,7 +197,7 @@ export const PERSONAS = {
   company: {
     id: 'company',
     card: { title: 'Startup / Company / Lab / R&D Team', description: 'Discover technical experts, engineers, researchers, and organizations to help build, improve, or research technologies.' },
-    heading: "Find the right technical expertise and partners for what you're building.",
+    heading: 'Find the most relevant person or organization for your problem.',
     supporting: 'Discover engineers, domain experts, researchers, laboratories, and organizations that can help your team develop technologies, solve technical challenges, conduct R&D, or build partnerships.',
     orgProfile: true,
     describe: {
@@ -214,7 +214,7 @@ export const PERSONAS = {
   independent: {
     id: 'independent',
     card: { title: 'Independent Researcher / Engineer / Freelancer', description: 'Connect with collaborators, technical specialists, mentors, and organizations working on related problems.' },
-    heading: 'Connect with the people and teams solving problems like yours.',
+    heading: 'Find the most relevant person or organization for your problem.',
     supporting: "Whether you're conducting independent research, developing software or hardware, providing technical services, or building your own projects, find collaborators and organizations working in your specialization.",
     describe: {
       question: 'What are you currently working on, or what specialized expertise are you exploring?',
@@ -234,7 +234,7 @@ export const PERSONAS = {
   other: {
     id: 'other',
     card: { title: 'Other', description: 'Describe your background and find the people or organizations best suited to your goals.' },
-    heading: 'Tell us what you want to explore or build.',
+    heading: 'Find the most relevant person or organization for your problem.',
     supporting: 'Briefly describe yourself and what you are working on. We will use the same discovery and ranking engine to find people and organizations with relevant demonstrated expertise.',
     background: true,
     describe: {

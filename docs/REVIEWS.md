@@ -254,3 +254,11 @@ For every laptop:
 Verified by Laptop 4: `npm run check` passes (69 tests). Browser, live server: results page, ranking details and the
 draft-email panel render in the new design; signed-in users go straight to the "Your profile" step; `#/overview` shows
 the landing page; no script errors. Signed-out landing and dark theme were not clicked through.
+
+## Review 11 (2026-11-22) — Heading and Edit search (owner request, Laptop 4)
+
+- One heading everywhere: "Find the most relevant person or organization for your problem." It replaces the five
+  per-persona headings in `shared/catalog.js`, the landing hero headline and the browser tab title. Supporting text
+  under the heading stays per persona.
+- The results summary no longer has an **Edit search** button (`SummaryBar` lost its `onEdit` prop); **New search**
+  remains. `onEditSearch` still powers "Change geography or types" and the broadening actions. Laptop 2: pull `main`.

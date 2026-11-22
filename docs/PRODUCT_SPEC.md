@@ -3,6 +3,8 @@
 > **Changes since this spec (Review 8, owner request):** no automatic profile discovery at sign-in (an optional,
 > editable "Your profile" step instead); no Objectives step or Goals summary; no project links; the same seven
 > geography options for every persona; on-demand work email; ranker provenance on every result.
+> Review 11: every persona's page heading (and the landing headline) is "Find the most relevant person or
+> organization for your problem."; the results summary has no "Edit search" button.
 > `docs/REVIEWS.md` → Review 8 and `docs/API.md` are authoritative where they differ from the text below.
 
 > Source of truth for product behaviour. Every workstream must satisfy the parts of this

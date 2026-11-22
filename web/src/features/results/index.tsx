@@ -160,7 +160,7 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
 
   return (
     <div className="stack rs-root">
-      <SummaryBar job={job} onEdit={() => onEditSearch(job.request)} onNew={onNewSearch} />
+      <SummaryBar job={job} onNew={onNewSearch} />
 
       {job.sample && <Notice tone="sample">{SAMPLE_BANNER}</Notice>}
       {jobError && <Notice tone="warning">Lost connection to the server ({jobError.message}). Retrying automatically…</Notice>}

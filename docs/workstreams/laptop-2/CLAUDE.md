@@ -55,7 +55,8 @@ Placeholders with these signatures exist — replace their bodies.
   stop polling when unmounted). Once a tab has `pagesReady ≥ 1`, show its page 1 via `api.results(jobId, tab, 1)`
   **even while the other tab is still running**.
 - Summary bar at top from `job.summary`: topic, people types, organization types, custom discipline,
-  geography, sizes, "unverified allowed" flag — plus **Edit search** (`onEditSearch(job.request)`) and **New search**.
+  geography, sizes, "unverified allowed" flag — plus **New search**. (No "Edit search" button in the summary since Review 11; `onEditSearch` is still used by the
+  "Change geography or types" and broadening actions.)
 - If `job.sample`, show a persistent banner: *"Sample data — fictional people and organizations for trying the product.
   Connect Crustdata for real results."* and a `Badge tone="sample"` on every card whose `meta.sample` is true.
 

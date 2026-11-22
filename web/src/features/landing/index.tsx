@@ -69,7 +69,7 @@ function Hero({ heroRef, onStart }: { heroRef: React.RefObject<HTMLElement | nul
       <div className="wrap lp-hero-grid">
         <div>
           <span className="lp-eyebrow"><span className="lp-eyebrow__dot" aria-hidden />Research &amp; engineering expertise discovery</span>
-          <h1 ref={title} className="lp-hero-title">Find who has actually solved your problem.</h1>
+          <h1 ref={title} className="lp-hero-title">Find the most relevant person or organization for your problem.</h1>
           <p className="lp-hero-sub">Describe the exact technical problem you’re working on. Overlap finds the people and organizations with the most relevant demonstrated expertise, and shows the evidence behind every match.</p>
           <div className="ui-cta-row">
             <ButtonLink href="#signin" magnetic onClick={(e) => { e.preventDefault(); onStart(); }}>Find your experts</ButtonLink>

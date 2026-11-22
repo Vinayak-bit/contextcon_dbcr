@@ -3,8 +3,8 @@ import type { SearchJob } from '../../api/types';
 import { Button, Card } from '../../ui';
 import { RANKER_LABELS, SCORED_BY_LABELS, TRANSPORT_LABELS } from './labels';
 
-/** What the user asked for, exactly as sent, plus Edit / New search. */
-export function SummaryBar({ job, onEdit, onNew }: { job: SearchJob; onEdit(): void; onNew(): void }) {
+/** What the user asked for, exactly as sent, plus New search. */
+export function SummaryBar({ job, onNew }: { job: SearchJob; onNew(): void }) {
   const s = job.summary;
   const target = job.request.target;
   // Searches made before the Objectives step was removed still carry `goal`; it is no longer shown.
@@ -25,8 +25,7 @@ export function SummaryBar({ job, onEdit, onNew }: { job: SearchJob; onEdit(): v
           <p className="rs-topic" title={s.topic}>{s.topic}</p>
         </div>
         <div className="row">
-          <Button variant="secondary" size="sm" onClick={onEdit}>Edit search</Button>
-          <Button variant="ghost" size="sm" onClick={onNew}>New search</Button>
+          <Button variant="secondary" size="sm" onClick={onNew}>New search</Button>
         </div>
       </div>
       <dl className="rs-summary__grid">
