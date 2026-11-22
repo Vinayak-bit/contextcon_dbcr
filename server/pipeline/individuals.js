@@ -16,7 +16,9 @@ const and = (...parts) => { const c = parts.filter(Boolean); return c.length > 1
  * @returns {Promise<{candidates: object[], excluded: object, hasMore: boolean}>}
  */
 export async function retrieveIndividualsPage(ctx, tab) {
-  const st = (tab.state ||= { cursors: {}, seen: [] });
+  const st = (tab.state ||= {});
+  st.cursors ||= {};
+  st.seen ||= [];
   const excluded = emptyExcluded();
   const { prefs, spec, limits } = ctx;
   const queries = spec.search_queries.slice(0, limits.maxQueriesPerPage);

@@ -1,0 +1,91 @@
+/* Design tokens — owned by Laptop 4. Use these variables everywhere; don't hard-code colors. */
+:root {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', Menlo, Consolas, monospace;
+
+  /* surfaces & text */
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-3: #e8ebf0;
+  --border: #dde1e7;
+  --border-strong: #c5cbd4;
+  --text: #171a1f;
+  --text-2: #4a5160;
+  --text-3: #6f7685;
+  --text-on-accent: #ffffff;
+
+  /* accent & semantic */
+  --accent: #4c6ef5;
+  --accent-hover: #3b5bdb;
+  --accent-soft: #edf2ff;
+  --accent-border: #bac8ff;
+  --success: #2b8a3e;
+  --success-soft: #ebfbee;
+  --warning: #b35c00;
+  --warning-soft: #fff4e6;
+  --danger: #c92a2a;
+  --danger-soft: #fff5f5;
+  --info: #1971c2;
+  --info-soft: #e7f5ff;
+  --sample: #7048e8;
+  --sample-soft: #f3f0ff;
+
+  /* score scale (0–100) */
+  --score-high: #2f9e44;
+  --score-mid: #f59f00;
+  --score-low: #adb5bd;
+
+  /* shape & depth */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 4px 12px rgba(16, 24, 40, 0.05);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.16);
+  --focus-ring: 0 0 0 3px rgba(76, 110, 245, 0.35);
+
+  /* spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --content-width: 1120px;
+  --header-height: 60px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-2: #1e222b;
+    --surface-3: #262b36;
+    --border: #2c323d;
+    --border-strong: #3b4250;
+    --text: #e8eaef;
+    --text-2: #b3b9c5;
+    --text-3: #8a91a0;
+    --accent: #748ffc;
+    --accent-hover: #91a7ff;
+    --accent-soft: #1d2340;
+    --accent-border: #364fc7;
+    --success: #69db7c;
+    --success-soft: #13261a;
+    --warning: #ffc078;
+    --warning-soft: #2b1f10;
+    --danger: #ff8787;
+    --danger-soft: #2c1517;
+    --info: #74c0fc;
+    --info-soft: #102434;
+    --sample: #b197fc;
+    --sample-soft: #221a3a;
+    --score-low: #5c6370;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+}

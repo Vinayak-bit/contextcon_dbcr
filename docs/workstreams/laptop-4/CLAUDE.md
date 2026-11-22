@@ -33,21 +33,22 @@ Done and on the `laptop-4/foundation` branch (merge to `main` before others star
   `finalScore` with weight redistribution, stable sort).
 - `server/pipeline/normalize.js`: Crustdata → standardized candidates with evidence ids.
 - Contracts: `docs/API.md`, `web/src/api/types.ts`, `web/src/api/client.ts`, pipeline signatures in the Laptop 3 brief.
-- Server: `server/pipeline/{prefs,job}.js`, `server/http.js`, `server/routes/{status,auth}.js`, and v0 pipeline stubs
-  (`geography`, `constraints`, `individuals`, `organizations`, `academic`, `dedupe`) for Laptop 3 to replace.
+- Server: `server/index.js`, `server/http.js` (cookie session, error envelope, rate limits), all routes in
+  `server/routes/{status,auth,profile,search}.js` (incl. profile discovery with 3 attempts, links flow, org identify,
+  OAuth callback page), `server/pipeline/{prefs,job}.js`, and v0 pipeline stubs (`geography`, `constraints`,
+  `individuals`, `organizations`, `academic`, `dedupe`) for Laptop 3 to replace.
+- Web: Vite + React 19 + TS scaffold (`vite.config.ts` proxies `/api`, `@shared` alias), `App.tsx` shell (session bootstrap,
+  hash-routed results, header), UI kit in `web/src/ui/` (+ `useLocalStorage`, `usePolling`), tokens with dark mode, and
+  placeholder `OnboardingApp` (minimal login + "Run sample search" dev helper) / `ResultsApp` / `ConnectionStatus`.
+- Tests: `server/test/ranking.test.js` (rubric math), `server/test/job.sample.test.js` (end-to-end job on sample data:
+  both tabs, page 2 without repeats, country hard filter). `npm run check` passes.
+- Verified in a browser: login → Run sample search → DeepSeek topic validation → sample retrieval → extraction →
+  hybrid DeepSeek + Jev ranking → results for both tabs.
 
-**Still to finish in Phase 0 (do these first; Laptops 1–2 need them to run the UI):**
-- `server/routes/{profile,topic,search}.js` and `server/index.js` (mount routes, session middleware, error handler,
-  static `dist/` in production, auto-connect MCP when `CRUSTDATA_API_KEY` is set).
-- Web scaffold: `web/index.html`, `vite.config.ts` (proxy `/api` → :8787, `@shared` alias), `tsconfig.json`,
-  `web/src/main.tsx`, `App.tsx` (session bootstrap, screen switching, header with `ConnectionStatus`), UI kit in
-  `web/src/ui/` (components named in the Laptop 1/2 briefs), `web/src/styles/tokens.css`, and placeholder
-  `OnboardingApp` / `ResultsApp` / `ConnectionStatus` with the fixed signatures. The onboarding placeholder includes a
-  "Run sample search" dev helper.
-- `package.json` scripts `check` / `test` as documented in `/CLAUDE.md`, then confirm `npm run check` and `npm run dev` work.
-
-Until those land, Laptops 1 and 2 can design their components against `web/src/api/types.ts` and the briefs. Laptop 3 can
-start immediately: everything it depends on (`server/crustdata`, `normalize.js`, `shared/catalog.js`) is in place.
+Known issues / follow-ups:
+- Ranking speed: about 40 s for 16 candidates with `LLM_JUDGE_REASONING=low`. A 50-per-page tab will take minutes, so tune
+  `LLM_CONCURRENCY`, try `LLM_JUDGE_REASONING=none`, and show partial progress (Laptop 2 shows the stage + progress).
+- Sample data can produce two different fictional people with the same name (different ids). That's expected.
 
 Verified so far: DeepSeek (`deepseek-flash` JSON mode) and Jev (`jev-1.14.0` score + noul) respond correctly with the
 project keys. **Not yet verified against live Crustdata.** No `CRUSTDATA_API_KEY` is set and OAuth hasn't been

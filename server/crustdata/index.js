@@ -54,6 +54,22 @@ class Gateway {
 
   isLiveReady() { return Boolean(this.live && this.live.status().connected); }
 
+  /**
+   * Decide whether a request runs on sample data. Returns true for sample.
+   * Throws 409 `crustdata_auth_required` when live data is needed but unavailable.
+   */
+  async resolveSample(requested) {
+    if (requested || this.mode === 'sample') return true;
+    if (this.mode === 'mcp' && !this.isLiveReady()) await this.live.connect();
+    if (!this.isLiveReady()) {
+      const err = new Error('Live results need a Crustdata connection. Connect Crustdata in the header, or use sample data.');
+      err.status = 409;
+      err.details = { code: 'crustdata_auth_required' };
+      throw err;
+    }
+    return false;
+  }
+
   transport(sample) {
     if (sample || !this.live) return this.sample;
     return this.live;
@@ -85,7 +101,7 @@ class Gateway {
     const groupSize = t.kind === 'mcp' ? 6 : 1;
     for (let g = 0; g < pending.length; g += groupSize) {
       const group = pending.slice(g, g + groupSize);
-      for (const _ of group) await this.limiter.wait(op);
+      if (t.kind !== 'sample') for (const _ of group) await this.limiter.wait(op);
       const results = await this._withRetry(op, t, group.map((p) => p.body));
       group.forEach((p, k) => {
         const r = results[k];

@@ -120,9 +120,9 @@ export function heuristicTopic(text, profile) {
       specific_methods: [],
       related_topics: [],
       required_expertise: topics.slice(0, 5),
-      search_queries: uniq([bigrams.slice(0, 3).join(' '), ...bigrams.slice(0, 4)]).filter(Boolean).slice(0, 5),
-      academic_queries: research ? [topics.slice(0, 3).join(' ')] : [],
-      org_queries: uniq([topics.slice(0, 3).join(' '), ...bigrams.slice(0, 2)]).filter(Boolean),
+      search_queries: uniq([t.slice(0, 5).join(' '), ...bigrams.slice(0, 4)]).filter(Boolean).slice(0, 5),
+      academic_queries: research ? [t.slice(0, 6).join(' ')] : [],
+      org_queries: uniq([t.slice(0, 4).join(' '), ...bigrams.slice(0, 2)]).filter(Boolean),
     },
   };
 }

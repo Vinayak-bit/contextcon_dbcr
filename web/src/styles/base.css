@@ -1,0 +1,55 @@
+/* Global base styles + app shell — owned by Laptop 4. */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { margin: 0 0 var(--space-2); line-height: 1.25; letter-spacing: -0.01em; }
+h1 { font-size: 1.75rem; font-weight: 700; }
+h2 { font-size: 1.3rem; font-weight: 650; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre { font-family: var(--font-mono); font-size: 0.9em; }
+img { max-width: 100%; }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--text-3); }
+.stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.spacer { flex: 1; }
+
+/* ---- app shell ---- */
+.app-header {
+  position: sticky; top: 0; z-index: 20;
+  height: var(--header-height);
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: 0 var(--space-5);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 700; font-size: 1.05rem; color: var(--text); }
+.brand:hover { text-decoration: none; }
+.brand-mark { width: 26px; height: 20px; position: relative; }
+.brand-mark::before, .brand-mark::after { content: ''; position: absolute; top: 2px; width: 16px; height: 16px; border-radius: 50%; opacity: 0.85; }
+.brand-mark::before { left: 0; background: var(--accent); }
+.brand-mark::after { left: 9px; background: #12b886; mix-blend-mode: multiply; }
+.brand-tag { color: var(--text-3); font-weight: 500; font-size: 0.85rem; }
+.app-user { display: flex; align-items: center; gap: var(--space-2); font-size: 0.9rem; color: var(--text-2); }
+.app-main { max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) var(--space-5) var(--space-7); }
+.app-loading { display: grid; place-items: center; min-height: 50vh; }
+
+@media (max-width: 640px) {
+  .app-header { padding: 0 var(--space-4); gap: var(--space-2); }
+  .brand-tag { display: none; }
+  .app-main { padding: var(--space-5) var(--space-4) var(--space-6); }
+  .app-user .user-name { display: none; }
+}

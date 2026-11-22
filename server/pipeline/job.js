@@ -23,13 +23,7 @@ function newTab() {
 /** Create and start a job. Throws HttpError(400 validation | 409 crustdata_auth_required). */
 export async function createJob(user, request) {
   const prefs = resolvePrefs(request, user.profile, user.organization);
-  let sample = Boolean(request.sample) || crustdata.mode === 'sample';
-  if (!sample) {
-    if (crustdata.mode === 'mcp' && !crustdata.isLiveReady()) await crustdata.live.connect();
-    if (!crustdata.isLiveReady()) {
-      throw new HttpError(409, 'Live results need a Crustdata connection. Connect Crustdata in the header, or run this search with sample data.', { code: 'crustdata_auth_required' });
-    }
-  }
+  const sample = await crustdata.resolveSample(Boolean(request.sample));
   const job = {
     id: uid('j_'),
     userId: user.id,
