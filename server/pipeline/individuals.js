@@ -16,6 +16,11 @@ const BASE_FIELDS = ['basic_profile', 'experience', 'education', 'skills', 'soci
 const GATED_FIELDS = ['dev_platform_profiles', 'research_profiles'];
 const MAX_ACADEMIC_AUTHORS = 40;
 const NO_FILTER = { field: 'basic_profile.name', type: 'is_not_null' };
+// Search returns only these groups (a response whitelist: without it every result bills
+// experience + education). `fit` is Crustdata's relevance tier for ranked search.
+const SEARCH_FIELDS = ['crustdata_person_id', 'basic_profile', 'social_handles', 'fit'];
+const FIT_BONUS = { strong: 1, possible: 0.4, weak: 0 };
+const NICHE_LANGUAGES = ['CUDA', 'Verilog', 'SystemVerilog', 'VHDL', 'Triton', 'Rust', 'Julia', 'Haskell', 'OCaml', 'Scala', 'Elixir', 'Erlang', 'Fortran', 'MATLAB', 'Solidity', 'Zig', 'Chisel', 'MLIR', 'OpenCL', 'Assembly'];
 
 const emptyExcluded = () => ({ geography: 0, unverified_location: 0, role: 0, unverified_role: 0, org_type: 0, size: 0, duplicates: 0 });
 const and = (...parts) => { const c = parts.filter(Boolean); return c.length > 1 ? { op: 'and', conditions: c } : c[0] || null; };
@@ -48,11 +53,6 @@ function prefilterScore(c, spec) {
 /* ------------------------------------------------------------------ */
 /* Crustdata calls                                                     */
 /* ------------------------------------------------------------------ */
-// Search returns only these groups (a response whitelist: without it every result bills
-// experience + education). `fit` is Crustdata's relevance tier for ranked search.
-const SEARCH_FIELDS = ['crustdata_person_id', 'basic_profile', 'social_handles', 'fit'];
-const FIT_BONUS = { strong: 1, possible: 0.4, weak: 0 };
-const NICHE_LANGUAGES = ['CUDA', 'Verilog', 'SystemVerilog', 'VHDL', 'Triton', 'Rust', 'Julia', 'Haskell', 'OCaml', 'Scala', 'Elixir', 'Erlang', 'Fortran', 'MATLAB', 'Solidity', 'Zig', 'Chisel', 'MLIR', 'OpenCL', 'Assembly'];
 
 /** Values for `in` filters on research interests / dev topics (exact stored values, so several spellings). */
 function topicValues(spec) {
@@ -105,8 +105,10 @@ async function searchPeople(ctx, st, items, fields) {
     const x = items[i];
     if (x.cursor && isCursorError(r)) { retry.push({ ...x, cursor: undefined, restarted: true }); return; }
     if (r.status === 400 && x.f && !x.noFallback) {
+      // Remember it: later pages must not pair this filter with the unfiltered search's cursor.
+      st.unfiltered[x.key] = true;
       ctx.warnings.push(`Crustdata rejected a person-search filter (${r.message}). Geography and role are still enforced after retrieval.`);
-      retry.push({ ...x, f: null, cursor: undefined });
+      retry.push({ ...x, f: null, cursor: undefined, restarted: true });
     }
   });
   const again = retry.length ? await run(retry) : [];
@@ -218,6 +220,8 @@ function withEnrichment(c, enriched) {
   if (!hit) return c;
   const e = personToCandidate(hit.p, { retrievedAt: hit.retrievedAt, transport: hit.transport, origin: c.meta.origin, searchRank: c.meta.searchRank });
   if (!e.meta.linkedin) e.meta.linkedin = c.meta.linkedin;
+  e.meta.enrichedByUs = true;
+  if (c.meta.fit) e.meta.fit = c.meta.fit;
   const stash = c.meta.mergedAcademic || [];
   if (!stash.length) return e;
   return dedupeCandidates([e, ...stash]).unique[0];
@@ -234,7 +238,7 @@ function withEnrichment(c, enriched) {
  */
 export async function retrieveIndividualsPage(ctx, tab) {
   const st = (tab.state ||= {});
-  st.cursors ||= {}; st.offsets ||= {}; st.seen ||= []; st.pool ||= []; st.deniedFields ||= [];
+  st.cursors ||= {}; st.offsets ||= {}; st.seen ||= []; st.pool ||= []; st.deniedFields ||= []; st.unfiltered ||= {};
   const excluded = emptyExcluded();
   const { prefs, spec, limits } = ctx;
   const geo = prefs.geography;
@@ -254,7 +258,7 @@ export async function retrieveIndividualsPage(ctx, tab) {
     st.secondPullsDone = true;
     // Institute scope needs current employers at search level; otherwise basic_profile is enough.
     const fields = geo.scope === 'institute' ? [...SEARCH_FIELDS, 'experience'] : SEARCH_FIELDS;
-    const items = [...active.map((q) => ({ key: q, q, f: filters, cursor: st.cursors[q] || undefined })), ...extra];
+    const items = [...active.map((q) => ({ key: q, q, f: st.unfiltered[q] ? null : filters, cursor: st.cursors[q] || undefined })), ...extra];
     const found = await searchPeople(ctx, st, items, fields);
     fresh.push(...found);
     ctx.log(`Found ${found.length} profiles across ${items.length} search pull${items.length === 1 ? '' : 's'}`);
@@ -279,7 +283,9 @@ export async function retrieveIndividualsPage(ctx, tab) {
   for (const c of unique) {
     const g = verifyGeo(c, geo);
     const role = matchRoles(c, prefs.individualTypes, prefs.customDiscipline);
-    const canEnrich = Boolean(c.meta?.linkedin) && !c.meta?.enriched;
+    // Anything with a profile URL that we haven't enriched yet can still be verified on richer data
+    // (normalize's `enriched` flag is also set by search-level `experience`, so it isn't used here).
+    const canEnrich = Boolean(c.meta?.linkedin) && !c.meta?.enrichedByUs;
     // Search-level data has no schools, so an institute "mismatch" is only final after enrichment.
     const geoPending = g.status === 'mismatch' && geo.scope === 'institute' && canEnrich;
     if (g.status === 'mismatch' && !geoPending) { excluded.geography += 1; markSeen(c); continue; }

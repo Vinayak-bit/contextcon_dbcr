@@ -14,7 +14,7 @@ import { HttpError, normText, uniq } from '../util.js';
 /* ------------------------------------------------------------------ */
 // Canonical English name → aliases (ISO-2, ISO-3, common short forms, native names).
 const COUNTRY_TABLE = {
-  'United States': ['us', 'usa', 'u.s.', 'u.s.a.', 'united states of america', 'america'],
+  'United States': ['us', 'usa', 'u.s.', 'u.s.a.', 'united states of america'],
   'United Kingdom': ['uk', 'gb', 'gbr', 'u.k.', 'great britain', 'britain', 'england', 'scotland', 'wales', 'northern ireland'],
   Canada: ['ca', 'can'], Mexico: ['mx', 'mex', 'méxico'],
   Germany: ['de', 'deu', 'deutschland'], France: ['fr', 'fra'], Netherlands: ['nl', 'nld', 'the netherlands', 'holland'],

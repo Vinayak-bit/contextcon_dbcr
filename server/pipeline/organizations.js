@@ -235,8 +235,9 @@ export async function retrieveOrganizationsPage(ctx, tab) {
     if (size === 'mismatch') { excluded.size += 1; markSeen(c); continue; }
     if (!allowU && !canEnrich) {
       if (g.status === 'unverified') { excluded.unverified_location += 1; markSeen(c); continue; }
-      if (type.status === 'unverified') { excluded.org_type += 1; markSeen(c); continue; }
-      if (size === 'unverified') { excluded.size += 1; markSeen(c); continue; }
+      // ExcludedCounts has no type/size-specific "unverified" key; `unverified_role` is the one the UI
+      // offers to relax with "Include unverified" (see docs/CHANGE_REQUESTS.md).
+      if (type.status === 'unverified' || size === 'unverified') { excluded.unverified_role += 1; markSeen(c); continue; }
     }
     const pending = g.status === 'unverified' || type.status === 'unverified' || size === 'unverified';
     c.meta.prefilterScore = Math.round((prefilterScore(c, spec) - (pending ? 0.5 : 0)) * 1000) / 1000;
@@ -270,9 +271,10 @@ export async function retrieveOrganizationsPage(ctx, tab) {
     if (g.status === 'mismatch') { excluded.geography += 1; continue; }
     if (g.status === 'unverified' && !allowU) { excluded.unverified_location += 1; continue; }
     const type = matchOrgTypes(c, prefs.orgTypes);
-    if (type.status === 'mismatch' || (type.status === 'unverified' && !allowU)) { excluded.org_type += 1; continue; }
+    if (type.status === 'mismatch') { excluded.org_type += 1; continue; }
     const size = matchSize(c, prefs.sizes);
-    if (size === 'mismatch' || (size === 'unverified' && !allowU)) { excluded.size += 1; continue; }
+    if (size === 'mismatch') { excluded.size += 1; continue; }
+    if ((type.status === 'unverified' || size === 'unverified') && !allowU) { excluded.unverified_role += 1; continue; }
     c.meta.geo = g;
     c.meta.orgTypeMatch = type.matched;
     c.meta.orgTypeStatus = type.status;

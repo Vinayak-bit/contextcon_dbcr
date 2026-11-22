@@ -20,3 +20,14 @@ Template:
 - Proposed signature / shape: `llm: { enabled, chatJson, usage: job.llmUsage }` in `makeCtx`. L3 already passes
   `usage: ctx.llm.usage` (undefined today, which chatJson tolerates).
 - Status: open
+
+## [L3 → L4, L2] Separate "unverified" exclusion keys for organization type and size — 2026-11-22
+- File(s): `web/src/api/types.ts` (`ExcludedCounts`), `web/src/features/results/labels.ts` (L2)
+- What & why: an organization whose type or headcount can't be verified is excluded unless the user allows
+  unverified results, so it should be relaxable by "Include unverified candidates". `ExcludedCounts` only has
+  `unverified_location` / `unverified_role`, and the UI's include-unverified offer counts exactly those two. Until
+  there are dedicated keys, L3 counts unverified org type **and** unverified size under `unverified_role` (so the
+  offer appears). In the Organizations tab, that label currently reads "role unverified".
+- Proposed signature / shape: add `unverified_type: number; unverified_size: number` to `ExcludedCounts` (L3 switches
+  to them as soon as they exist), or label `unverified_role` as "type/size unverified" in the Organizations tab.
+- Status: open

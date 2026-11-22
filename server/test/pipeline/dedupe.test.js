@@ -20,7 +20,7 @@ test('people dedupe on id, profile URL and name + organization', () => {
     p(1, 'Jane Doe', 'Acme', 'https://linkedin.com/in/jane'),
     p(1, 'Jane Doe', 'Acme', 'https://linkedin.com/in/jane'),
     p(2, 'Jane D', 'Other', 'https://www.linkedin.com/in/jane/'),
-    p(3, 'Dr. Jane Doe', 'ACME Inc.', null),
+    p(undefined, 'Dr. Jane Doe', 'ACME Inc.', null), // no Crustdata id: merges on name + organization
     p(4, 'John Roe', 'Acme', null),
   ];
   const { unique, duplicates } = dedupeCandidates(list);
@@ -60,12 +60,19 @@ test('academic-only identity is kept when no person matches', () => {
   assert.equal(unique.length, 2);
 });
 
-test('organizations dedupe on company id, domain and name + country', () => {
+test('organizations dedupe on company id, domain and name + country; different domains stay apart', () => {
   const c = (id, name, domain, country) => companyToCandidate({ crustdata_company_id: id, basic_info: { name, primary_domain: domain }, locations: { country } }, {});
   const { unique, duplicates } = dedupeCandidates([
     c(1, 'Acme Inc', 'acme.com', 'United States'), c(1, 'Acme', 'acme.com', 'United States'),
     c(2, 'Acme Corp', 'acme.io', 'United States'), c(3, 'Other', 'acme.com', 'Germany'), c(4, 'Acme', 'acme.de', 'Germany'),
+    c(5, 'Acme, Inc.', undefined, 'United States'),
   ]);
   assert.equal(duplicates, 3);
-  assert.deepEqual(unique.map((u) => u.meta.crustdata_company_id), [1, 4]);
+  assert.deepEqual(unique.map((u) => u.meta.crustdata_company_id), [1, 2, 4]);
+});
+
+test('same name at the same organization with different Crustdata ids are different people', () => {
+  const { unique, duplicates } = dedupeCandidates([p(10, 'Wei Zhang', 'Google', 'https://l.com/in/wz1'), p(11, 'Wei Zhang', 'Google', 'https://l.com/in/wz2'), p(12, 'Wei Zhang', 'Google', 'https://l.com/in/wz1')]);
+  assert.equal(unique.length, 2);
+  assert.equal(duplicates, 1, 'same profile URL under another id is still a duplicate');
 });

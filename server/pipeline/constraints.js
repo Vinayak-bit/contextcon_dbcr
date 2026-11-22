@@ -96,8 +96,10 @@ function classify(c, type) {
   const positive = [m.industries, m.companyTypes, m.names].some((l) => l?.length);
   if (positive) {
     const hit = has(industries, m.industries) || has(companyType, m.companyTypes) || nameHas(c.name, m.names);
+    // A miss only counts as a mismatch when every field the type relies on is actually recorded.
+    const unknown = (m.industries?.length && !industries) || (m.companyTypes?.length && !companyType);
     if (hit) verdicts.push('match');
-    else verdicts.push(industries || companyType ? 'mismatch' : 'unverified');
+    else verdicts.push(unknown ? 'unverified' : 'mismatch');
   }
 
   if (m.requireResearchSignal) {

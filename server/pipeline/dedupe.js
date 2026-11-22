@@ -46,6 +46,26 @@ function keys(c) {
   return out;
 }
 
+/**
+ * Two records that share a soft key (name + organization) but carry different hard identifiers
+ * (Crustdata person ids, company domains) are different entities, e.g. two "Wei Zhang"s at one company.
+ */
+function conflicting(a, b) {
+  if (!a || !b || a.candidate_id === b.candidate_id) return false;
+  const ma = a.meta || {}; const mb = b.meta || {};
+  if (a.candidate_type === 'individual') {
+    if (ma.mergeInto === b.candidate_id || mb.mergeInto === a.candidate_id) return false;
+    if (ma.crustdata_person_id && mb.crustdata_person_id && ma.crustdata_person_id !== mb.crustdata_person_id) {
+      // Same profile URL under two ids is still the same person.
+      return !(ma.linkedin && mb.linkedin && normUrl(ma.linkedin) === normUrl(mb.linkedin));
+    }
+    return false;
+  }
+  const da = String(ma.domain || '').toLowerCase().replace(/^www\./, '');
+  const db = String(mb.domain || '').toLowerCase().replace(/^www\./, '');
+  return Boolean(da && db && da !== db && ma.crustdata_company_id !== mb.crustdata_company_id);
+}
+
 /** Can an academic-only identity be attributed to this person (same name and a matching affiliation)? */
 function academicMatchesPerson(a, p) {
   if (normName(a.name) !== normName(p.name)) return false;
@@ -92,7 +112,7 @@ export function dedupeCandidates(list) {
   const register = (c, idx) => keys(c).forEach((k) => { if (!byKey.has(k)) byKey.set(k, idx); });
 
   for (const c of list || []) {
-    let idx = keys(c).map((k) => byKey.get(k)).find((i) => i !== undefined);
+    let idx = keys(c).map((k) => byKey.get(k)).find((i) => i !== undefined && !conflicting(c, unique[i]));
     if (idx === undefined && c.candidate_type === 'individual') {
       // Academic-only ↔ person attribution (either direction).
       idx = unique.findIndex((u) => (c.meta?.academicOnly && !u.meta?.academicOnly && academicMatchesPerson(c, u))

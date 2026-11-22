@@ -302,3 +302,56 @@ test('company search: one ranked window per query (no cursor), then filters-only
   assert.ok(filtersOnly.every((b) => JSON.stringify(b.filters).includes('taxonomy.professional_network_specialities')));
   assert.ok(ctx.warnings.every((w) => !/cursor/.test(w)));
 });
+
+/* ------------------------------------------------------------------ */
+/* Review fixes                                                        */
+/* ------------------------------------------------------------------ */
+test('institute scope: search-level employer mismatch is re-checked after enrichment (current school)', async () => {
+  const year = new Date().getFullYear();
+  const student = { ...profile(1), experience: { employment_details: { current: [{ name: 'Acme', title: 'PhD Student' }] } }, basic_profile: { ...profile(1).basic_profile, current_title: 'PhD Student' } };
+  const gw = stubGateway((op, body) => {
+    if (op === 'personSearch') return { profiles: isSecondPull(body) ? [] : [student], next_cursor: null };
+    if (op === 'personEnrich') return body.professional_network_profile_urls.map((u) => ({ matched_on: u, matches: [{ confidence_score: 1, person_data: { ...student, education: { schools: [{ school: 'Massachusetts Institute of Technology', end_year: year + 2 }] } } }] }));
+    return { results: [] };
+  });
+  const req = { ...base, target: 'individuals', individualTypes: ['phd_students'], geography: { option: 'my_institute', institute: 'MIT', allowUnverified: false, preferProximity: false } };
+  const r = await retrieveIndividualsPage(makeCtx(req, { gateway: gw, limits: { academicWebSearch: false } }), { state: {}, page: 1 });
+  assert.equal(r.candidates.length, 1);
+  assert.equal(r.candidates[0].meta.geo.status, 'verified');
+  assert.match(r.candidates[0].meta.geo.detail, /Current school/);
+});
+
+test('a rejected filter is remembered: later pages do not resend it with the unfiltered cursor', async () => {
+  const gw = stubGateway((op, body) => {
+    if (op !== 'personSearch') return op === 'personEnrich' ? [] : { results: [] };
+    if (isSecondPull(body)) return { profiles: [], next_cursor: null };
+    if (body.filters?.op || body.filters?.type === 'in') return err(400, 'Unsupported field');
+    const page = body.cursor ? Number(body.cursor) : 0;
+    return { profiles: [profile(10 + 2 * page), profile(11 + 2 * page)], next_cursor: page < 2 ? String(page + 1) : null };
+  });
+  const req = { ...base, category: 'student', target: 'individuals', individualTypes: ['pro_engineers'], geography: { option: 'specific', countries: ['Germany'], allowUnverified: false, preferProximity: false } };
+  const ctx = makeCtx(req, { gateway: gw, limits: { academicWebSearch: false, maxQueriesPerPage: 1 } });
+  await runPages(ctx, retrieveIndividualsPage, 3);
+  const main = gw.calls.filter((c) => c.op === 'personSearch' && !isSecondPull(c.body));
+  const rejected = main.filter((c) => c.body.filters?.op || c.body.filters?.type === 'in');
+  assert.equal(rejected.length, 1, 'the bad filter is sent once');
+  assert.ok(main.filter((c) => c.body.cursor).every((c) => c.body.filters.type === 'is_not_null'));
+  assert.equal(ctx.warnings.filter((w) => /rejected a person-search filter/.test(w)).length, 1);
+});
+
+test('organizations with unknown type or size count as unverified (relaxable), not as mismatches', async () => {
+  const gw = stubGateway((op) => {
+    if (op === 'companySearch') return { companies: [{ crustdata_company_id: 1, basic_info: { name: 'Mystery Co', description: 'KV cache inference' }, locations: { country: 'Germany' } }], next_cursor: null };
+    if (op === 'companyEnrich') return [];
+    return { results: [] };
+  });
+  const req = { ...base, category: 'company', target: 'organizations', orgTypes: ['startups'], sizes: ['11-50'], geography: { option: 'same_country', country: 'Germany', allowUnverified: false, preferProximity: false } };
+  const strict = await retrieveOrganizationsPage(makeCtx(req, { gateway: gw }), { state: {}, page: 1 });
+  assert.equal(strict.candidates.length, 0);
+  assert.equal(strict.excluded.unverified_role, 1);
+  assert.equal(strict.excluded.org_type + strict.excluded.size, 0);
+  const relaxed = await retrieveOrganizationsPage(makeCtx({ ...req, geography: { ...req.geography, allowUnverified: true } }, { gateway: gw }), { state: {}, page: 1 });
+  assert.equal(relaxed.candidates.length, 1);
+  assert.equal(relaxed.candidates[0].meta.orgTypeStatus, 'unverified');
+  assert.equal(relaxed.candidates[0].meta.sizeStatus, 'unverified');
+});

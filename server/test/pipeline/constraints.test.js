@@ -52,6 +52,8 @@ test('matchOrgTypes enforces each selected type', () => {
   assert.equal(r.label, 'Universities / Institutes');
 
   assert.equal(matchOrgTypes(company({ name: 'Bank', industries: ['Banking'], company_type: 'Public Company' }), orgTypes('tech_companies')).status, 'mismatch');
+  assert.equal(matchOrgTypes(company({ employee_count: 40, industries: ['Software Development'] }), orgTypes('startups')).status, 'unverified', 'company type unknown is not a mismatch');
+  assert.equal(matchOrgTypes(company({ company_type: 'Privately Held' }), orgTypes('tech_companies')).status, 'unverified', 'industries unknown is not a mismatch');
   assert.equal(matchOrgTypes(company({ employee_count: 5000, description: 'Our R&D centre builds chips', industries: ['Semiconductors'] }), orgTypes('corporate_rd')).status, 'match');
   assert.equal(matchOrgTypes(company({ employee_count: 5000, description: 'Retail stores', industries: ['Retail'] }), orgTypes('corporate_rd')).status, 'mismatch');
 
