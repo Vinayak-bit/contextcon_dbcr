@@ -1,7 +1,7 @@
 // SearchRequest → validated, resolved preferences (owned by Laptop 4).
 // User-selected constraints are kept separate from AI-generated expansions (spec §13):
 // `prefs` holds only what the user explicitly chose; `spec` holds the LLM's interpretation.
-import { INDIVIDUAL_TYPES, ORG_TYPES, ORG_SIZES, PERSONAS } from '../../shared/catalog.js';
+import { INDIVIDUAL_TYPES, ORG_TYPES, ORG_SIZES, PERSONAS, canonicalGeoOption } from '../../shared/catalog.js';
 import { HttpError } from '../util.js';
 import { resolveGeography } from './geography.js';
 
@@ -13,7 +13,6 @@ export function resolvePrefs(req, userProfile, organization) {
   if (!String(req.description || '').trim()) throw bad('Describe your project or topic.');
   if (!req.spec?.problem_statement) throw bad('Validate the topic before searching.');
   if (!['individuals', 'organizations', 'both'].includes(req.target)) throw bad('Choose Individuals, Organizations, or Both.');
-  if (!Array.isArray(req.objectives) || !req.objectives.length) throw bad('Select at least one goal.');
 
   const wantPeople = req.target !== 'organizations';
   const wantOrgs = req.target !== 'individuals';
@@ -28,8 +27,10 @@ export function resolvePrefs(req, userProfile, organization) {
   if (wantOrgs && !orgIds.length) throw bad('Select at least one type of organization to find.');
 
   const sizeIds = wantOrgs ? (req.sizes || []).filter((id) => id !== 'any' && ORG_SIZES.some((s) => s.id === id)) : [];
-  if (!persona.geography.includes(req.geography?.option)) throw bad('Choose one of the geography options shown.');
-  const geography = resolveGeography(req.geography, userProfile, organization);
+  // Older saved searches may use legacy option ids (same_city / same_country).
+  const geoPref = { ...(req.geography || {}), option: canonicalGeoOption(req.geography?.option) };
+  if (!persona.geography.includes(geoPref.option)) throw bad('Choose one of the geography options shown.');
+  const geography = resolveGeography(geoPref, userProfile, organization);
 
   return {
     target: req.target,
@@ -38,7 +39,8 @@ export function resolvePrefs(req, userProfile, organization) {
     customDiscipline,
     sizes: sizeIds.map((id) => ORG_SIZES.find((s) => s.id === id)),
     geography,
-    objectives: [...req.objectives.filter((o) => o !== 'Other'), ...(req.objectives.includes('Other') && req.objectiveOther ? [`Other: ${req.objectiveOther}`] : [])],
+    // The user's own words; with the selected candidate types this is what ranking is judged against.
+    description: String(req.description).trim().slice(0, 4000),
     preferences: req.preferences || {},
     individualTypeLabels: [...individualIds.map((id) => labelOf(persona.individuals, id)), ...(customDiscipline ? [customDiscipline] : [])],
     orgTypeLabels: orgIds.map((id) => labelOf(persona.organizations, id)),
@@ -49,7 +51,6 @@ export function resolvePrefs(req, userProfile, organization) {
 export function summarize(req, prefs) {
   return {
     topic: req.spec.problem_statement,
-    goal: prefs.objectives,
     individualTypes: prefs.individualTypeLabels.filter((l) => l !== prefs.customDiscipline),
     orgTypes: prefs.orgTypeLabels,
     customDiscipline: prefs.customDiscipline || undefined,

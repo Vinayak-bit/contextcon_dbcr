@@ -74,6 +74,24 @@ export const RANKER_LABELS: Record<RankerEngine, string> = {
   heuristic: 'Heuristic (no AI keys)',
 };
 
+/** Who actually scored a candidate, as shown on cards and in the drawer. */
+export const SCORED_BY_LABELS: Record<RankerEngine, string> = {
+  jev: 'Jev',
+  llm: 'DeepSeek judge',
+  hybrid: 'Jev + DeepSeek judge',
+  heuristic: 'Keyword heuristic',
+};
+
+/**
+ * Scored-by badge for a ranking: the engine that produced the score, and whether it was a fallback from the
+ * configured engine (older searches have no `configured_engine`, so they never show as a fallback).
+ */
+export function scoredBy(r: { engine: RankerEngine; configured_engine?: RankerEngine; fallback?: { from: RankerEngine; to: RankerEngine; reason: string } | null }): { text: string; tone: 'accent' | 'warning'; title?: string } {
+  const by = SCORED_BY_LABELS[r.engine] ?? r.engine;
+  if (r.fallback) return { text: `Scored by ${by} (fallback)`, tone: 'warning', title: `${SCORED_BY_LABELS[r.fallback.from] ?? r.fallback.from} didn't score this result: ${r.fallback.reason}` };
+  return { text: `Scored by ${by}`, tone: 'accent' };
+}
+
 /** Display names for Crustdata transports. */
 export const TRANSPORT_LABELS: Record<Transport, string> = { mcp: 'MCP', rest: 'REST', sample: 'Sample data' };
 

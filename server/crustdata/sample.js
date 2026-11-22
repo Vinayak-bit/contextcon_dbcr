@@ -238,6 +238,23 @@ export class SampleCrustdata {
         });
         return { data: { success: true, query: body.query, results }, credits: 0 };
       }
+      case 'personContact': {
+        // Deterministic: about half of sample people have a (fictional, example.com) work email.
+        return {
+          data: (body.professional_network_profile_urls || []).map((u) => {
+            const p = people.get(u);
+            if (!p) return matchWrap(u, 'professional_network_profile_url', null, 'person_data');
+            const has = parseInt(hash(`contact:${u}`).slice(0, 2), 16) % 2 === 0;
+            const [first, last] = p.basic_profile.name.toLowerCase().split(' ');
+            const org = (p.experience.employment_details.current[0]?.name || 'sample').toLowerCase().replace(/[^a-z]+/g, '');
+            const contact = has
+              ? { business_emails: [{ email: `${first}.${last}@${org}.example.com`, status: 'verified', last_updated: '2026-11-01T00:00:00Z' }] }
+              : { business_emails: [], business_emails_message: 'No business email found' };
+            return matchWrap(u, 'professional_network_profile_url', { crustdata_person_id: p.crustdata_person_id, contact, _sample: true }, 'person_data');
+          }),
+          credits: 0,
+        };
+      }
       case 'webFetch':
         return { data: (body.urls || []).map((u) => ({ success: true, url: u, title: 'Sample page', content: 'Sample content (offline mode).' })), credits: 0 };
       default:

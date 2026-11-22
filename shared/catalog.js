@@ -87,16 +87,23 @@ export const ORG_SIZES = [
 /* Geography                                                           */
 /* ------------------------------------------------------------------ */
 export const GEO_SCOPES = {
-  my_institute: { label: 'My institute or university', scope: 'institute' },
+  my_institute: { label: 'My institution or organization', scope: 'institute' },
   my_city: { label: 'My city', scope: 'city' },
-  same_city: { label: 'Same city', scope: 'city' },
   my_country: { label: 'My country', scope: 'country' },
-  same_country: { label: 'Same country', scope: 'country' },
   another_country: { label: 'Another country', scope: 'countries', single: true },
   specific: { label: 'Specific countries or regions', scope: 'countries' },
-  hubs: { label: 'Selected international research hubs', scope: 'hubs' },
+  hubs: { label: 'Research hubs', scope: 'hubs' },
   worldwide: { label: 'Worldwide', scope: 'worldwide' },
+  // Legacy ids (older saved searches / drafts); mapped to my_city / my_country.
+  same_city: { label: 'My city', scope: 'city', legacyFor: 'my_city' },
+  same_country: { label: 'My country', scope: 'country', legacyFor: 'my_country' },
 };
+
+/** The geography options every persona offers, in display order. */
+export const GEO_OPTIONS = ['my_institute', 'my_city', 'my_country', 'another_country', 'specific', 'hubs', 'worldwide'];
+
+/** Map a legacy geography option id to its current id. */
+export const canonicalGeoOption = (id) => GEO_SCOPES[id]?.legacyFor || id;
 
 export const REGIONS = {
   'North America': ['United States', 'Canada', 'Mexico'],
@@ -143,7 +150,6 @@ export const RESEARCH_HUBS = [
   { id: 'seoul', label: 'Seoul', country: 'South Korea', cities: ['Seoul'] },
 ];
 
-const SHARED_GEO = ['my_institute', 'my_city', 'my_country', 'another_country', 'specific', 'worldwide'];
 
 /* ------------------------------------------------------------------ */
 /* Personas                                                            */
@@ -159,13 +165,10 @@ export const PERSONAS = {
     describe: {
       question: 'What are you working on, or what technical topic interests you?',
       placeholder: "I'm building an LLM inference system and want to optimize KV-cache memory usage during long-context generation. I'm looking for people with experience in efficient attention and GPU inference.",
-      linksHint: 'GitHub repositories, technical documentation, papers, or project portfolios',
     },
-    objectivesTitle: 'What do you want help with?',
-    objectives: ['Find a mentor or supervisor', 'Find fellow students to collaborate with', 'Find experienced engineers or researchers', 'Find an internship or project opportunity', 'Find organizations working on this technology', 'Explore technical partnerships', 'Other'],
     individuals: ['professors', 'phd_postdoc', 'fellow_students', 'research_scientists', 'pro_engineers', 'pro_researchers', 'independent', 'founders_leaders'].map((id) => opt(id)),
     organizations: ['universities', 'academic_labs', 'industrial_labs', 'startups', 'tech_companies', 'corporate_rd', 'engineering_product_cos', 'independent_orgs'].map((id) => opt(id)),
-    geography: SHARED_GEO,
+    geography: GEO_OPTIONS,
     resultsFocus: 'Prioritizes direct relevance to your project, demonstrated expertise, and suitability for your chosen goal.',
   },
   professor: {
@@ -176,10 +179,7 @@ export const PERSONAS = {
     describe: {
       question: 'What research question, engineering challenge, or technical project are you exploring?',
       placeholder: "I'm investigating the use of reinforcement learning to improve autonomous robotics systems and want collaborators who have experience with robot learning and real-world deployment.",
-      linksHint: 'Research-paper URLs, project websites, or descriptions of ongoing work',
     },
-    objectivesTitle: 'What are you looking for?',
-    objectives: ['Research collaborators / Co-authors', 'PhD students or early-career researchers', 'Students for technical projects', 'Industry researchers', 'Experienced engineering specialists', 'Research laboratories', 'Industry R&D partnerships', 'Institutions for joint research', 'Other'],
     individuals: [opt('professors'), opt('postdocs'), opt('phd_students'), opt('students'), opt('industry_research_scientists'), opt('research_engineers'), opt('specialized_engineers'), opt('independent_researchers')],
     organizations: [opt('universities', 'Universities'), opt('academic_institutes'), opt('specialized_labs'), opt('corporate_rd_labs'), opt('tech_companies'), opt('deeptech_startups'), opt('engineering_teams'), opt('independent_research_orgs')],
     preferences: {
@@ -191,8 +191,8 @@ export const PERSONAS = {
         { id: 'target_org_type', label: 'Target institute or organization type', type: 'text', placeholder: 'e.g. robotics institutes, autonomous-vehicle companies' },
       ],
     },
-    geography: ['my_institute', 'my_country', 'another_country', 'specific', 'hubs', 'worldwide'],
-    resultsFocus: 'Ranks by demonstrated research or engineering contribution, technical overlap, and suitability for your collaboration objective — not by publication count alone.',
+    geography: GEO_OPTIONS,
+    resultsFocus: 'Ranks by demonstrated research or engineering contribution, technical overlap, and suitability for the people and organizations you chose — not by publication count alone.',
   },
   company: {
     id: 'company',
@@ -203,15 +203,12 @@ export const PERSONAS = {
     describe: {
       question: 'What are you building, researching, or trying to solve?',
       placeholder: 'We are developing an edge AI accelerator and need specialists with experience in RTL optimization, timing closure, memory architecture, and FPGA/ASIC implementation.',
-      linksHint: 'Technical specifications, GitHub repositories, architecture documents, or project descriptions',
     },
-    objectivesTitle: 'What does your organization need?',
-    objectives: ['Find experienced engineers', 'Find research scientists', 'Find specialized technical consultants', 'Find academic experts', 'Find development or research partners', 'Find companies with complementary technology', 'Find engineering service providers', 'Find laboratories or universities', 'Find students or early-career contributors', 'Other'],
     individuals: [opt('software_engineers'), opt('hardware_engineers'), opt('ml_engineers'), opt('domain_specialists'), opt('research_scientists'), opt('academic_experts'), opt('consultants_freelancers'), opt('phd_postdoc'), opt('founders_experts')],
     customDiscipline: true,
     organizations: [opt('startups'), opt('small_companies'), opt('mid_companies'), opt('large_enterprises'), opt('engineering_services'), opt('specialized_labs', 'Specialized R&D Laboratories'), opt('universities', 'Universities / Research Institutes'), opt('corporate_research_teams'), opt('consulting_orgs')],
     sizeStep: true,
-    geography: ['same_city', 'same_country', 'specific', 'worldwide'],
+    geography: GEO_OPTIONS,
     resultsFocus: 'Individuals: relevant skills, demonstrable implementation or research accomplishments, and role suitability. Organizations: technical overlap, demonstrated delivery or research capability, and appropriate scale. Results are not assumed to be hiring or consulting opportunities.',
   },
   independent: {
@@ -222,10 +219,7 @@ export const PERSONAS = {
     describe: {
       question: 'What are you currently working on, or what specialized expertise are you exploring?',
       placeholder: "I'm developing custom Triton kernels for faster transformer inference. I want to connect with people working on GPU optimization and companies building high-performance inference systems.",
-      linksHint: 'GitHub, portfolio, publications, or a personal website',
     },
-    objectivesTitle: 'What are you looking for?',
-    objectives: ['Technical collaborators', 'Research collaborators', 'Mentors / Senior specialists', 'Experts in a complementary field', 'Companies working on related technologies', 'Potential clients or project partners', 'Research laboratories', 'Independent engineers or researchers', 'Other'],
     individuals: [opt('fellow_independent'), opt('independent_engineers'), opt('professors', 'Professors'), opt('phd_postdoc'), opt('industry_research_scientists'), opt('senior_specialists'), opt('consultants'), opt('founders')],
     organizations: [opt('startups'), opt('tech_companies'), opt('engineering_product_teams'), opt('academic_labs', 'Academic Research Labs'), opt('corporate_rd_labs', 'Corporate R&D Labs'), opt('universities'), opt('engineering_services', 'Engineering Service Providers'), opt('independent_research_orgs')],
     preferences: {
@@ -234,27 +228,24 @@ export const PERSONAS = {
         { id: 'expertise_relation', label: 'What kind of match?', type: 'multi', options: ['Similar expertise', 'Complementary expertise', 'More experienced specialists', 'Similar career stage', 'Organizations with demonstrated related work'] },
       ],
     },
-    geography: SHARED_GEO,
-    resultsFocus: 'Ranks by your selected objective, relevant technical work, accomplishments, and collaboration fit — without assuming you are seeking employment or clients.',
+    geography: GEO_OPTIONS,
+    resultsFocus: 'Ranks by relevant technical work, accomplishments, and fit with the people and organizations you chose — without assuming you are seeking employment or clients.',
   },
   other: {
     id: 'other',
     card: { title: 'Other', description: 'Describe your background and find the people or organizations best suited to your goals.' },
     heading: 'Tell us what you want to explore or build.',
-    supporting: 'Briefly describe yourself and your technical objective. We will use the same discovery and ranking engine to find people and organizations with relevant demonstrated expertise.',
+    supporting: 'Briefly describe yourself and what you are working on. We will use the same discovery and ranking engine to find people and organizations with relevant demonstrated expertise.',
     background: true,
     describe: {
       question: 'What research or engineering topic do you want to explore or build?',
       placeholder: 'I run a climate-tech nonprofit and want to find engineers who have built low-cost soil-moisture sensor networks with LoRaWAN, and labs studying sensor calibration drift.',
-      linksHint: 'Any links that describe your work or project',
     },
-    objectivesTitle: 'What is your intended objective?',
-    objectives: ['Find collaborators', 'Find mentors or advisors', 'Find technical experts', 'Find research partners', 'Find organizations working on this', 'Find service providers', 'Learn who is active in this area', 'Other'],
     individuals: [...new Set(Object.keys(INDIVIDUAL_TYPES))].map((id) => opt(id)),
     organizations: [...new Set(Object.keys(ORG_TYPES))].map((id) => opt(id)),
     customDiscipline: true,
-    geography: SHARED_GEO,
-    resultsFocus: 'Ranks by direct technical relevance and demonstrated expertise for your stated objective.',
+    geography: GEO_OPTIONS,
+    resultsFocus: 'Ranks by direct technical relevance and demonstrated expertise for your project.',
   },
 };
 

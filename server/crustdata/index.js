@@ -10,7 +10,7 @@ import { SampleCrustdata } from './sample.js';
 export { CrustdataError };
 
 // Requests per minute (documented defaults, kept slightly under).
-const RPM = { personSearch: 28, personEnrich: 14, personIdentify: 10, companySearch: 28, companyEnrich: 14, companyIdentify: 14, webSearch: 20, webFetch: 9 };
+const RPM = { personSearch: 28, personEnrich: 14, personIdentify: 10, personContact: 14, companySearch: 28, companyEnrich: 14, companyIdentify: 14, webSearch: 20, webFetch: 9 };
 const CACHEABLE = new Set(['personSearch', 'personEnrich', 'personIdentify', 'companySearch', 'companyEnrich', 'companyIdentify', 'webSearch', 'webFetch']);
 
 class Limiter {

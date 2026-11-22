@@ -30,7 +30,7 @@ Task 1 — decide whether the description is specific enough for meaningful expe
 - Specific enough: names a concrete problem, method, system, component, or application niche (e.g. "Reducing KV-cache memory overhead in long-context LLM inference", "RTL timing optimization of multi-clock SoC designs", "Designing low-noise analog front ends for sensor interfaces").
 - Engineering problems are first-class; do not require academic framing.
 
-Task 2 — if too broad, propose 4–6 narrower, concrete topics the user could pick. If a verified professional profile is provided, base most suggestions on its actual skills, projects and publications and mark them based_on "profile"; mark others "description". Never restrict the user to their past fields.
+Task 2 — if too broad, propose 4–6 narrower, concrete topics the user could pick. If the user's profile is provided (verified via Crustdata or entered by the user), base most suggestions on its actual skills, relevant work and publications and mark them based_on "profile"; mark others "description". Never restrict the user to their past fields.
 
 Task 3 — always produce the structured spec (even when broad, as a best effort):
 - domain: "Research", "Engineering", or "Research and Engineering" for mixed projects.
@@ -50,19 +50,18 @@ function profileSummary(profile) {
   if (!profile) return 'none';
   return JSON.stringify({
     current_role: profile.current_role, institution_or_organization: profile.institution,
-    skills: (profile.skills || []).slice(0, 25), projects: (profile.projects || []).slice(0, 8), publications: (profile.publications || []).slice(0, 8),
+    skills: (profile.skills || []).slice(0, 25), relevant_work: (profile.projects || []).slice(0, 8), publications: (profile.publications || []).slice(0, 8),
     experience: (profile.experience || []).slice(0, 6),
   });
 }
 
-export async function validateTopic({ description, links = [], category, background, profile, usage }) {
+export async function validateTopic({ description, category, background, profile, usage }) {
   const text = String(description || '').trim();
   if (!config.llm.enabled) return heuristicTopic(text, profile);
   const user = `User category: ${category || 'unspecified'}
 ${background ? `User background: ${background}\n` : ''}Project description:
 """${text}"""
-Links provided: ${links.length ? links.join(', ') : 'none'}
-Verified professional profile: ${profileSummary(profile)}`;
+User profile (${profile ? (profile.source === 'crustdata' ? 'verified via Crustdata' : 'entered by the user') : 'not provided'}): ${profileSummary(profile)}`;
   try {
     const out = await chatJson({ system: SYSTEM, user, schema: TopicSchema, model: config.llm.model, reasoning: config.llm.topicReasoning, maxTokens: 3000, usage });
     if (!out.spec) out.spec = heuristicTopic(text, profile).spec;

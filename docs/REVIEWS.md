@@ -168,3 +168,42 @@ covers it.
 
 Note for Laptop 4: `enrollments()` reads the degree from the education evidence text produced by `normalize.js`
 ("Education: <degree, field> at <school> (<year>)"). Keep that format stable, or tell Laptop 3 if it changes.
+
+## Review 8 (2026-11-22) — Owner-requested simplification (Laptop 4)
+
+Branch `laptop-4/simplify-onboarding`. The project owner asked Laptop 4 to make these changes across the app, including
+files that Laptop 1 (`web/src/features/onboarding/`) and Laptop 2 (`web/src/features/results/`) own. **Laptops 1 and 2:
+pull `main` before continuing.** Your briefs are updated.
+
+1. **No automatic profile discovery at sign-in.** Sign-in and sessions are unchanged. Profiles confirmed earlier stay as
+   editable starting points. The discovery endpoints remain on the server for older clients but the UI no longer calls them.
+2. **"Your profile" step, first for every persona, optional.** Role or background, institution or company, city and
+   country, skills, relevant work. Stored only with consent (`PUT /me/consent`; turning it off deletes the profile).
+   Used as secondary context for topic refinement, geography prefill and ranking. The project stays the primary signal.
+3. **Objectives removed.** "Who to find" (Individuals / Organizations / Both plus type filters) stays. No objectives
+   validation and no Goals summary row. Ranking uses the project description plus the selected types. Older searches and
+   drafts reopen: objectives and links are ignored, the draft version is 2 with a migration from version 1.
+4. **One geography list for all five personas** (`GEO_OPTIONS`): my institution or organization, my city, my country,
+   another country, specific countries or regions, research hubs, worldwide. Prefilled from the profile or organization;
+   missing values are asked for (400, never guessed). Legacy `same_city` / `same_country` map to `my_city` /
+   `my_country`. Always a hard filter.
+5. **Project links removed** from the wizard. The description box is larger and accepts 12,000 characters for excerpts.
+6. **On-demand "View work email"** on individual results (`server/pipeline/contact.js`, `WorkEmail.tsx`). Crustdata
+   `person_contact_enrich`, business emails only, with attribution. States: found, none, unavailable (no matched profile,
+   not on the plan, no credits, not connected), error (retryable). Zero contact credits until the user clicks. Emails
+   are kept in memory for the search and never written to job files. **The current Crustdata plan does not include this
+   endpoint** (403), so live lookups show "not enabled on this Crustdata plan" until the plan changes.
+7. **Ranker provenance.** `Ranking.configured_engine` vs `Ranking.engine`, `Ranking.fallback = {from, to, reason}`,
+   and `SearchJob.engines.scored`. Cards, the drawer and the summary footer show "Scored by …" and mark fallbacks.
+
+Verified by Laptop 4:
+- `npm run check` passes (65 tests, including `server/test/simplified-flow.test.js`).
+- `npm run check:ranker` (live keys): Jev returned four scores and a decision, and every criterion was sourced from Jev.
+  With Jev pointed at a bad endpoint, the candidate fell back to the DeepSeek judge with `{from: jev, to: llm,
+  reason: "Jev 404: Not Found"}` and a search warning.
+- Browser, sample data: sign-in goes straight to category; profile saved with consent and skipped; all five personas show
+  "Your profile" first, no Objectives, and the same seven geography options; all five submit a search and are scored by
+  Jev. An older company search saved with Objectives and `same_country` reopens with no Goal row, opens in the wizard as
+  "My country · Australia", and re-runs. Work email shows found and "No work email on file" states.
+- Live work-email lookup on the real account returns `unavailable` (plan gate), spending 0 credits. A found email on
+  live data could not be verified for that reason.

@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test \"server/test/**/*.test.js\"",
     "check": "npm run typecheck && npm test && npm run build",
-    "benchmark:rankers": "node server/scripts/benchmark-rankers.js"
+    "benchmark:rankers": "node server/scripts/benchmark-rankers.js",
+    "check:ranker": "node server/scripts/check-ranker.js"
   },
   "engines": {
     "node": ">=20"

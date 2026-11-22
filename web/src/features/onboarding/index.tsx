@@ -3,7 +3,6 @@ import { PERSONA_ORDER, PERSONAS } from '@shared/catalog.js';
 import { api, ApiError } from '../../api/client';
 import type { AppStatus, Me, PersonaId, SearchRequest } from '../../api/types';
 import { Button, Card, Notice, PageHeader, SelectCard, TextField, Toggle } from '../../ui';
-import { Discovery, ProfileSummary } from './profile';
 import { Wizard } from './wizard';
 import './onboarding.css';
 
@@ -47,10 +46,10 @@ function Login({ onMeChange }: Pick<OnboardingAppProps, 'onMeChange'>) {
             error={failure?.field === 'name' ? failure.message : undefined} />
           <TextField label="Email" required type="email" value={email} onChange={setEmail} autoComplete="email"
             error={failure?.field === 'email' ? failure.message : undefined} />
-          <Toggle label="Use my name and email to find my professional profile and personalize results."
-            description="Stored only to improve relevance — never used for authentication."
+          <Toggle label="Store the profile details I add to personalize results."
+            description="Optional. Stored only to improve relevance — never used for authentication."
             checked={consent} onChange={setConsent} />
-          {!consent && <p className="muted">You can continue without consent. Profile discovery will be skipped.</p>}
+          {!consent && <p className="muted">You can continue without consent. Your profile won't be stored or used.</p>}
           {failure && !['name', 'email'].includes(failure.field || '') && <Notice tone="danger">{failure.message}</Notice>}
           <Button type="submit" loading={busy}>Continue</Button>
         </form>
@@ -59,8 +58,9 @@ function Login({ onMeChange }: Pick<OnboardingAppProps, 'onMeChange'>) {
   );
 }
 
+/** After sign-in: choose a category (once), then the wizard. No automatic profile lookup. */
 function SignedIn({ me, status, onMeChange, onSearchStarted, editRequest }: OnboardingAppProps & { me: Me }) {
-  const [screen, setScreen] = useState<'category' | 'profile' | null>(null);
+  const [screen, setScreen] = useState<'category' | null>(null);
   const [appliedEdit, setAppliedEdit] = useState<SearchRequest | null>(null);
   const [discardedEdit, setDiscardedEdit] = useState<SearchRequest | null>(null);
   const activeEdit = editRequest && editRequest !== discardedEdit ? editRequest : null;
@@ -82,13 +82,6 @@ function SignedIn({ me, status, onMeChange, onSearchStarted, editRequest }: Onbo
     }
   }
 
-  if (screen === 'profile' && me.profile) {
-    return <ProfileSummary profile={me.profile} onMeChange={onMeChange} onContinue={() => setScreen(null)} />;
-  }
-  if (me.consent && (me.discovery.status === 'pending' || me.discovery.status === 'exhausted')) {
-    return <Discovery me={me} connected={status?.crustdata.connected}
-      onMeChange={onMeChange} onConfirmed={(updated) => { setScreen('profile'); onMeChange(updated); }} />;
-  }
   if (screen === 'category' || (!me.category && !activeEdit)) {
     return (
       <section className="ob-page">
@@ -107,8 +100,7 @@ function SignedIn({ me, status, onMeChange, onSearchStarted, editRequest }: Onbo
 
   return <Wizard key={category} category={category} me={me} status={status} editRequest={appliedEdit === activeEdit ? null : activeEdit}
     onMeChange={onMeChange} onSearchStarted={onSearchStarted}
-    onChangeCategory={() => { setAppliedEdit(activeEdit); setScreen('category'); }}
-    onShowProfile={me.profile ? () => { setAppliedEdit(activeEdit); setScreen('profile'); } : undefined} />;
+    onChangeCategory={() => { setAppliedEdit(activeEdit); setScreen('category'); }} />;
 }
 
 /** Route the user to their next incomplete onboarding step. */

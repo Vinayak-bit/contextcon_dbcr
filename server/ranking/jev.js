@@ -31,7 +31,7 @@ const Q = {
       levels: ['None of the needed methods', 'Generic related skills only', 'A few of the needed methods', 'Several needed methods, demonstrated', 'Most needed methods, demonstrated in practice', 'Deep, demonstrated mastery of the needed methods'],
     },
     role_suitability: {
-      instructions: "How suitable is the candidate for the relationship the user requested (their objective and selected candidate types), considering career stage and complementary expertise? Do not assume willingness or availability.",
+      instructions: "How well does the candidate fit the kind of person the user selected (their chosen candidate types) for this project, considering career stage and complementary expertise? Do not assume willingness or availability.",
       levels: ['Clearly unsuitable for the requested relationship', 'Poor fit', 'Uncertain fit, little evidence', 'Reasonable fit', 'Good fit with supporting evidence', 'Excellent fit with strong supporting evidence'],
     },
   },

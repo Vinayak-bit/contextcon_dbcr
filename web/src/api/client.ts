@@ -2,7 +2,7 @@
 import type {
   AppStatus, Me, DiscoverResponse, LinksRequest, LinksResponse, OrgProfile, PersonaId,
   TopicValidateRequest, TopicValidation, SearchRequest, StartSearchResponse, SearchJob,
-  ResultsPage, TabKey, Candidate, UserProfile, ApiErrorBody,
+  ResultsPage, TabKey, Candidate, UserProfile, ApiErrorBody, WorkEmailLookup,
 } from './types';
 
 export class ApiError extends Error {
@@ -52,6 +52,8 @@ export const api = {
   logout: () => request<{ ok: true }>('POST', '/auth/logout'),
   deleteMe: () => request<{ ok: true }>('DELETE', '/me'),
   setCategory: (category: PersonaId) => request<Me>('PUT', '/me/category', { category }),
+  /** Give or withdraw consent to store profile details. Withdrawing deletes the stored profile. */
+  setConsent: (consent: boolean) => request<Me>('PUT', '/me/consent', { consent }),
 
   // profile discovery
   discover: (b: { method: 'email' | 'name'; name?: string; affiliation?: string; sample?: boolean }) => request<DiscoverResponse>('POST', '/profile/discover', b),
@@ -74,6 +76,8 @@ export const api = {
   results: (id: string, tab: TabKey, page: number) => request<ResultsPage>('GET', `/search/${encodeURIComponent(id)}/results?tab=${tab}&page=${page}`),
   loadMore: (id: string, tab: TabKey) => request<SearchJob>('POST', `/search/${encodeURIComponent(id)}/more`, { tab }),
   candidate: (id: string, candidateId: string) => request<Candidate>('GET', `/search/${encodeURIComponent(id)}/candidates/${encodeURIComponent(candidateId)}`),
+  /** On-demand only: may spend a Crustdata contact credit when an email is found. */
+  workEmail: (id: string, candidateId: string) => request<WorkEmailLookup>('POST', `/search/${encodeURIComponent(id)}/candidates/${encodeURIComponent(candidateId)}/work-email`),
 };
 
 export type Api = typeof api;

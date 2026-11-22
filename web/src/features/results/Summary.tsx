@@ -1,15 +1,14 @@
 // Search summary bar and the engines / credits footer.
 import type { SearchJob } from '../../api/types';
 import { Button, Card } from '../../ui';
-import { RANKER_LABELS, TRANSPORT_LABELS } from './labels';
+import { RANKER_LABELS, SCORED_BY_LABELS, TRANSPORT_LABELS } from './labels';
 
 /** What the user asked for, exactly as sent, plus Edit / New search. */
 export function SummaryBar({ job, onEdit, onNew }: { job: SearchJob; onEdit(): void; onNew(): void }) {
   const s = job.summary;
   const target = job.request.target;
-  const items: { label: string; value: string }[] = [
-    { label: 'Goal', value: s.goal.length ? s.goal.join(', ') : 'Not specified' },
-  ];
+  // Searches made before the Objectives step was removed still carry `goal`; it is no longer shown.
+  const items: { label: string; value: string }[] = [];
   if (target !== 'organizations') items.push({ label: 'People', value: s.individualTypes.join(', ') || 'Not specified' });
   if (s.customDiscipline) items.push({ label: 'Custom discipline', value: s.customDiscipline });
   if (target !== 'individuals') items.push({ label: 'Organizations', value: s.orgTypes.join(', ') || 'Not specified' });
@@ -42,7 +41,8 @@ export function EnginesFooter({ job }: { job: SearchJob }) {
   const e = job.engines;
   return (
     <footer className="rs-engines" aria-label="Engines and usage">
-      <span><strong>Ranking:</strong> {RANKER_LABELS[e.ranker] ?? e.ranker}</span>
+      <span><strong>Ranking (configured):</strong> {RANKER_LABELS[e.ranker] ?? e.ranker}</span>
+      {e.scored && Object.keys(e.scored).length > 0 && <span><strong>Scored by:</strong> {Object.entries(e.scored).map(([k, n]) => `${n} ${SCORED_BY_LABELS[k as keyof typeof SCORED_BY_LABELS] ?? k}${k !== e.ranker ? ' (fallback)' : ''}`).join(' · ')}</span>}
       <span><strong>Understanding & evidence:</strong> {e.llm === 'deepseek' ? 'DeepSeek' : 'Keyword heuristics'}</span>
       <span><strong>Crustdata:</strong> {TRANSPORT_LABELS[e.crustdata] ?? e.crustdata}</span>
       <span><strong>Credits used:</strong> {job.credits.crustdata.toLocaleString()} ({job.credits.calls} calls, {job.credits.cached} cached)</span>

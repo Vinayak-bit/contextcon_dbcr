@@ -1,4 +1,4 @@
-import { COUNTRIES, GEO_SCOPES, REGIONS, RESEARCH_HUBS } from '@shared/catalog.js';
+import { COUNTRIES, GEO_SCOPES, REGIONS, RESEARCH_HUBS, canonicalGeoOption } from '@shared/catalog.js';
 import type { GeoOptionId, Me } from '../../api/types';
 import { CheckboxGroup, RadioGroup, TextField, Toggle } from '../../ui';
 import { isCity, isCountry, type GeographyDraft, type Persona } from './draft';
@@ -11,7 +11,8 @@ export function GeographyFields({ value, onChange, persona, me, skipOrganization
   me: Me;
   skipOrganization?: boolean;
 }) {
-  const { option } = value;
+  // Older searches may carry legacy ids (same_city / same_country); show them as their current option.
+  const option = value.option && canonicalGeoOption(value.option) as GeoOptionId;
   const organization = 'orgProfile' in persona && !skipOrganization ? me.organization : null;
   const profile = me.profile;
   const primaryLocation = organization?.location || profile?.location;
@@ -38,7 +39,8 @@ export function GeographyFields({ value, onChange, persona, me, skipOrganization
       <RadioGroup legend="Where should we look?" value={option ?? null}
         options={(persona.geography as GeoOptionId[]).map((id) => ({ id, label: GEO_SCOPES[id].label }))}
         onChange={(id) => choose(id as GeoOptionId)} />
-      {option === 'my_institute' && <TextField label="Institute or university" value={value.institute || ''}
+      {option === 'my_institute' && <TextField label="Institution or organization" value={value.institute || ''}
+        hint="Only people and organizations verifiably affiliated with it are included."
         onChange={(institute) => patch({ institute })} required />}
       {isCity(option) && <div className="ob-fields">
         <TextField label="City" value={value.city || ''} onChange={(city) => patch({ city })} required />

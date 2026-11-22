@@ -36,6 +36,13 @@ authRouter.delete('/me', requireUser, (req, res) => {
   res.json({ ok: true });
 });
 
+// Consent to store profile details. Withdrawing it deletes what was stored.
+authRouter.put('/me/consent', requireUser, (req, res) => {
+  if (typeof req.body?.consent !== 'boolean') throw new HttpError(400, 'consent must be true or false.', { code: 'validation' });
+  const consent = req.body.consent;
+  res.json(meView(users.update(req.user.id, consent ? { consent } : { consent, profile: null, profileContext: undefined })));
+});
+
 authRouter.put('/me/category', requireUser, (req, res) => {
   const category = req.body?.category;
   if (!PERSONAS[category]) throw new HttpError(400, 'Unknown category.', { code: 'validation' });

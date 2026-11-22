@@ -140,7 +140,8 @@ async function buildPage(job, key) {
 }
 
 function persist(job) {
-  const { meter, ...rest } = job;
+  // Work-email lookups (job.contacts) stay in memory and are never written to disk.
+  const { meter, contacts, ...rest } = job;
   jobStore.save({ ...rest, meter: meter.toJSON() });
 }
 
@@ -170,7 +171,7 @@ export function publicJob(job) {
     request: job.request,
     summary: job.summary,
     sample: job.sample,
-    engines: job.engines,
+    engines: { ...job.engines, scored: scoredCounts(job) },
     tabs: Object.fromEntries(Object.entries(job.tabs).map(([k, t]) => [k, { status: t.status, stage: t.stage, stageLabel: t.stageLabel, progress: t.progress, pagesReady: t.pagesReady, hasMore: t.hasMore, error: t.error, log: t.log.slice(-15), excludedTotals: t.excludedTotals }])),
     credits: { crustdata: m.credits, calls: m.calls, cached: m.cached },
     llmUsage: job.llmUsage,
@@ -178,6 +179,16 @@ export function publicJob(job) {
     warnings: job.warnings,
     error: job.error,
   };
+}
+
+/** How many ranked candidates each engine actually scored (configured engine vs. fallbacks). */
+function scoredCounts(job) {
+  const counts = {};
+  for (const t of Object.values(job.tabs)) for (const p of t.pages || []) for (const c of p.candidates) {
+    const e = c.ranking?.engine;
+    if (e) counts[e] = (counts[e] || 0) + 1;
+  }
+  return counts;
 }
 
 /** → ResultsPage */

@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { PERSONAS } from '../../shared/catalog.js';
 import { validateTopic } from '../llm/topic.js';
 import { createJob, findCandidate, getJob, loadMore, publicJob, resultsPage } from '../pipeline/job.js';
+import { lookupWorkEmail } from '../pipeline/contact.js';
 import { HttpError } from '../util.js';
 import { rateLimit, requireUser, wrap } from '../http.js';
 
@@ -12,10 +13,10 @@ searchRouter.post('/topic/validate', requireUser, rateLimit({ windowMs: 60_000, 
   const b = req.body || {};
   const description = String(b.description || '').trim();
   if (!description) throw new HttpError(400, 'Describe what you are working on.', { code: 'validation' });
-  if (description.length > 4000) throw new HttpError(400, 'Please keep the description under 4,000 characters.', { code: 'validation' });
+  if (description.length > 12000) throw new HttpError(400, 'Please keep the description (including pasted excerpts) under 12,000 characters.', { code: 'validation' });
   if (b.category && !PERSONAS[b.category]) throw new HttpError(400, 'Unknown category.', { code: 'validation' });
-  const links = (Array.isArray(b.links) ? b.links : []).map(String).filter(Boolean).slice(0, 10);
-  res.json(await validateTopic({ description, links, category: b.category || req.user.category, background: b.background, profile: req.user.profile }));
+  // Project links are no longer accepted: pages were never fetched, so URLs alone told the model nothing.
+  res.json(await validateTopic({ description, category: b.category || req.user.category, background: b.background, profile: req.user.profile }));
 }));
 
 searchRouter.post('/search', requireUser, rateLimit({ windowMs: 60_000, max: 10 }), wrap(async (req, res) => {
@@ -41,3 +42,9 @@ searchRouter.post('/search/:id/more', requireUser, (req, res) => {
 searchRouter.get('/search/:id/candidates/:cid', requireUser, (req, res) => {
   res.json(findCandidate(getJob(req.params.id, req.user), req.params.cid));
 });
+
+// On demand only (a click): may spend a Crustdata contact credit when an email is found.
+searchRouter.post('/search/:id/candidates/:cid/work-email', requireUser, rateLimit({ windowMs: 60_000, max: 20 }), wrap(async (req, res) => {
+  const job = getJob(req.params.id, req.user);
+  res.json(await lookupWorkEmail(job, findCandidate(job, req.params.cid)));
+}));

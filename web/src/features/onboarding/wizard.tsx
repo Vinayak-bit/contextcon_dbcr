@@ -4,12 +4,13 @@ import { api, ApiError } from '../../api/client';
 import type { AppStatus, Me, PersonaId, SearchRequest, Target } from '../../api/types';
 import { Badge, Button, Card, CheckboxGroup, Notice, PageHeader, RadioGroup, SelectCard, Stepper, TextArea, TextField } from '../../ui';
 import {
-  clearDraft, getSteps, includesOrgs, includesPeople, readDraft, saveDraft, searchRequest, stepError,
+  clearDraft, DESCRIPTION_MAX, getSteps, includesOrgs, includesPeople, readDraft, saveDraft, searchRequest, stepError,
   type CheckedTopic, type Draft, type Persona, type Step,
 } from './draft';
-import { isWebUrl, labelOptions } from './fields';
+import { labelOptions } from './fields';
 import { GeographyFields, geographyLabel } from './geography';
 import { OrganizationFields } from './organization';
+import { ProfileStep } from './profile';
 
 const targets: { id: Target; label: string; description: string }[] = [
   { id: 'individuals', label: 'Individuals', description: 'Find people with relevant expertise.' },
@@ -60,7 +61,7 @@ function TopicReview({ topic, onSuggestion, onRewrite }: {
   );
 }
 
-function Summary({ draft, persona, onEdit }: { draft: Draft; persona: Persona; onEdit(step: Step): void }) {
+function Summary({ draft, persona, me, onEdit }: { draft: Draft; persona: Persona; me: Me; onEdit(step: Step): void }) {
   const formatTypes = (options: { id: string; label: string }[], ids: string[]) =>
     options.filter(({ id }) => ids.includes(id)).map(({ label }) => label).join(', ');
   const { spec } = draft.topic || {};
@@ -72,9 +73,11 @@ function Summary({ draft, persona, onEdit }: { draft: Draft; persona: Persona; o
       step: 'describe',
     },
     {
-      label: 'Goals',
-      value: draft.objectives.map((goal) => goal === 'Other' && draft.objectiveOther ? `Other · ${draft.objectiveOther}` : goal).join(', '),
-      step: 'objectives',
+      label: 'Your profile',
+      value: me.profile && me.consent
+        ? [me.profile.current_role, me.profile.institution, [me.profile.location.city, me.profile.location.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Saved'
+        : 'Not provided (optional)',
+      step: 'profile',
     },
     { label: 'Who to find', value: targets.find(({ id }) => id === draft.target)?.label, step: 'target' },
   ];
@@ -125,11 +128,10 @@ interface WizardProps {
   onMeChange(me: Me): void;
   onSearchStarted(jobId: string, request: SearchRequest): void;
   onChangeCategory(): void;
-  onShowProfile?(): void;
 }
 
 /** Guide the selected persona from project description through search submission. */
-export function Wizard({ category, me, status, editRequest, onMeChange, onSearchStarted, onChangeCategory, onShowProfile }: WizardProps) {
+export function Wizard({ category, me, status, editRequest, onMeChange, onSearchStarted, onChangeCategory }: WizardProps) {
   const persona = PERSONAS[category];
   const [draft, setDraft] = useState(() => readDraft(me.id, category, editRequest));
   const [busy, setBusy] = useState<'topic' | 'search' | null>(null);
@@ -157,7 +159,7 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
     setFailure('');
   }
 
-  function patchTopic(fields: Pick<Partial<Draft>, 'description' | 'links' | 'background'>) {
+  function patchTopic(fields: Pick<Partial<Draft>, 'description' | 'background'>) {
     patch({ ...fields, topic: undefined, completed: draft.completed.filter((item) => item !== 'describe' && item !== 'topic') });
   }
 
@@ -183,16 +185,14 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
   async function validate(description: string) {
     if (busy) return;
     description = description.trim();
-    const links = draft.links.map((link) => link.trim()).filter(Boolean);
     if (!description) { setFailure('Describe what you are working on.'); return; }
-    if (links.some((link) => !isWebUrl(link))) { setFailure('Use valid HTTP or HTTPS URLs for project links.'); return; }
 
     setBusy('topic');
     setFailure('');
     try {
-      const topic = await api.validateTopic({ description, links, category, background: draft.background.trim() || undefined });
+      const topic = await api.validateTopic({ description, category, background: draft.background.trim() || undefined });
       const completed = [...new Set([...draft.completed.filter((item) => item !== 'topic'), 'describe' as const])];
-      patch({ description, links, topic, completed, step: 'topic' });
+      patch({ description, topic, completed, step: 'topic' });
     } catch (error) {
       setFailure(error instanceof Error ? error.message : 'Could not check the topic. Try again.');
     } finally {
@@ -244,6 +244,9 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
 
   let content: ReactNode;
   switch (step) {
+    case 'profile':
+      content = <ProfileStep me={me} onMeChange={onMeChange} onDone={() => complete()} onBack={goBack} />;
+      break;
     case 'organization':
       content = <OrganizationFields initial={draft.skipOrganization ? null : me.organization} onSave={onMeChange}
         onNext={(skipOrganization) => complete({ skipOrganization })} onBack={goBack} onBusyChange={setOrgBusy} />;
@@ -257,36 +260,15 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
         <div className="stack ob-section">
           <div className="ob-prompt"><h2>{persona.describe.question}</h2></div>
           <div className="ob-composer">
-            <TextArea label="Your project or topic" value={draft.description} maxLength={4000} rows={5}
-              placeholder={persona.describe.placeholder} onChange={(description) => patchTopic({ description })} required />
-          </div>
-          <div className="stack">
-            <h3>Project links <span className="muted">(optional)</span></h3>
-            <p className="muted">{persona.describe.linksHint}</p>
-            {draft.links.map((link, index) => <div className="ob-link-row" key={index}>
-              <TextField label={`Project link ${index + 1}`} type="url" value={link}
-                onChange={(value) => patchTopic({ links: draft.links.map((old, i) => i === index ? value : old) })} />
-              <Button variant="ghost" aria-label={`Remove project link ${index + 1}`}
-                onClick={() => patchTopic({ links: draft.links.filter((_, i) => i !== index) })}>Remove</Button>
-            </div>)}
-            {draft.links.length < 10 && <div><Button variant="secondary" size="sm"
-              onClick={() => patch({ links: [...draft.links, ''] })}>Add a link</Button></div>}
+            <TextArea label="Your project or topic" value={draft.description} maxLength={DESCRIPTION_MAX} rows={10}
+              placeholder={persona.describe.placeholder} onChange={(description) => patchTopic({ description })} required
+              hint={<>Paste relevant excerpts too — an abstract, README section, spec or problem statement. Links aren't fetched, so paste the text that matters. {draft.description.length.toLocaleString()} / {DESCRIPTION_MAX.toLocaleString()} characters.</>} />
           </div>
         </div>
       );
       break;
     case 'topic':
       content = <TopicReview topic={draft.topic} onSuggestion={(description) => void validate(description)} onRewrite={() => navigate('describe')} />;
-      break;
-    case 'objectives':
-      content = (
-        <div className="stack ob-section">
-          <CheckboxGroup legend={persona.objectivesTitle} options={labelOptions(persona.objectives)}
-            value={draft.objectives} onChange={(objectives) => patch({ objectives })} />
-          {draft.objectives.includes('Other') && <TextField label="Other goal" value={draft.objectiveOther}
-            required onChange={(objectiveOther) => patch({ objectiveOther })} />}
-        </div>
-      );
       break;
     case 'target':
       content = (
@@ -344,7 +326,7 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
         onChange={(geography) => patch({ geography })} />;
       break;
     case 'summary':
-      content = <Summary draft={draft} persona={persona} onEdit={(to) => navigate(to, true)} />;
+      content = <Summary draft={draft} persona={persona} me={me} onEdit={(to) => navigate(to, true)} />;
       break;
   }
 
@@ -355,7 +337,7 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
       <PageHeader title={persona.heading} subtitle={persona.supporting} eyebrow={persona.card.title}
         actions={<div className="ob-inline">
           <Button variant="ghost" size="sm" disabled={Boolean(busy) || orgBusy} onClick={onChangeCategory}>Change category</Button>
-          {onShowProfile && <Button variant="ghost" size="sm" disabled={Boolean(busy) || orgBusy} onClick={onShowProfile}>Your profile</Button>}
+          {step !== 'profile' && <Button variant="ghost" size="sm" disabled={Boolean(busy) || orgBusy} onClick={() => navigate('profile', step === 'summary' || draft.returnToSummary)}>Your profile</Button>}
         </div>} />
       <nav className="ob-step-nav" aria-label="Search setup progress" inert={Boolean(busy) || orgBusy}>
         <Stepper steps={steps} current={step}
@@ -370,7 +352,7 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
             {step === 'summary' && (draft.sample || sampleMode) && <Notice tone="sample">This search uses sample data.</Notice>}
             {step === 'summary' && !draft.sample && !sampleMode && (authRequired || status?.crustdata.connected === false) &&
               <Notice tone="warning">Connect Crustdata in the header for live results, or choose Use sample data.</Notice>}
-            {step !== 'organization' && <div className="ob-actions">
+            {step !== 'organization' && step !== 'profile' && <div className="ob-actions">
               <Button variant="ghost" onClick={goBack} disabled={Boolean(busy)}>Back</Button>
               {step === 'summary' && !draft.sample && !sampleMode && sampleAvailable &&
                 (authRequired || status?.crustdata.connected === false) && <Button variant="secondary"

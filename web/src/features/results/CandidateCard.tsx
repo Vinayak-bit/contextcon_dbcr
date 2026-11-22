@@ -4,15 +4,17 @@ import { memo, useMemo } from 'react';
 import type { Candidate, GroundedItem, IndividualCandidate, OrganizationCandidate } from '../../api/types';
 import { Badge, Button, Card, Chip, ScoreBar, ScoreRing } from '../../ui';
 import { evidenceMap, GroundedLine, type EvidenceMap } from './Evidence';
-import { formatTime, geoLabel, orNA, ORIENTATION_LABELS } from './labels';
+import { formatTime, geoLabel, orNA, ORIENTATION_LABELS, scoredBy } from './labels';
+import { WorkEmail } from './WorkEmail';
 
 const MAX_CHIPS = 6;
 
 /** One ranked result. `onDetails` opens the ranking drawer. */
-export const CandidateCard = memo(function CandidateCard({ candidate, onDetails }: { candidate: Candidate; onDetails(c: Candidate): void }) {
+export const CandidateCard = memo(function CandidateCard({ jobId, candidate, onDetails }: { jobId: string; candidate: Candidate; onDetails(c: Candidate): void }) {
   const ev = useMemo(() => evidenceMap(candidate.evidence), [candidate.evidence]);
   const geo = geoLabel(candidate.meta.geo, candidate.candidate_type);
   const r = candidate.ranking;
+  const scorer = scoredBy(r);
   return (
     <Card className="rs-card" padded={false}>
       <article aria-labelledby={`c-${candidate.candidate_id}`}>
@@ -30,12 +32,14 @@ export const CandidateCard = memo(function CandidateCard({ candidate, onDetails 
             {geo && <Badge tone={geo.tone} title={geo.title}>{geo.text}</Badge>}
             {candidate.candidate_type === 'individual' && candidate.orientation && <Badge tone="info">{ORIENTATION_LABELS[candidate.orientation] ?? candidate.orientation}</Badge>}
             {candidate.candidate_type === 'individual' && candidate.meta.academicOnly && <Badge tone="warning" title="Found only through academic sources; no professional profile was matched">Academic-only identity</Badge>}
+            <Badge tone={scorer.tone} title={scorer.title}>{scorer.text}</Badge>
             <Badge tone="neutral" title="How sure the ranker is, given the available evidence">Confidence: {r.confidence}</Badge>
           </div>
 
           {r.why_relevant && <p className="rs-why"><strong>Why relevant: </strong>{r.why_relevant}</p>}
 
           {candidate.candidate_type === 'individual' ? <IndividualBody c={candidate} ev={ev} /> : <OrgBody c={candidate} ev={ev} />}
+          {candidate.candidate_type === 'individual' && <div className="rs-contact"><WorkEmail jobId={jobId} candidate={candidate} /></div>}
 
           <footer className="rs-card__foot">
             <SourceLinks c={candidate} />

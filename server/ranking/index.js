@@ -125,6 +125,7 @@ export async function rankCandidates(candidates, { spec, prefs, userProfile, usa
       scores.proximity = prox.score;
       breakdown.push({ key: 'proximity', label: criteria.find((x) => x.key === 'proximity').label, score: prox.score, source: 'rule', note: prox.reason });
     }
+    const actual = llm && jev ? 'hybrid' : llm ? 'llm' : jev ? 'jev' : 'heuristic';
     const fs = finalScore(rk, scores, active);
     breakdown.forEach((b) => { b.weight = fs.weights[b.key] ?? 0; });
     // Narrative: the LLM judge's own text when it ran, otherwise Jev levels + extracted evidence.
@@ -143,7 +144,10 @@ export async function rankCandidates(candidates, { spec, prefs, userProfile, usa
       confidence: story.confidence || 'low',
       evidence_references: story.evidence_references || [],
       jev_decision: jev?.decision || null,
-      engine: llm && jev ? 'hybrid' : llm ? 'llm' : jev ? 'jev' : 'heuristic',
+      // Provenance: what actually scored this candidate vs. what the server is configured to use.
+      engine: actual,
+      configured_engine: engine,
+      fallback: actual !== engine ? { from: engine, to: actual, reason: fallbackReason(c, engine) } : null,
     };
     done += 1;
     onProgress?.(done, candidates.length);
@@ -151,6 +155,12 @@ export async function rankCandidates(candidates, { spec, prefs, userProfile, usa
   if (llmFail) warnings?.push(`LLM judge failed for ${llmFail} candidate(s); their scores use the remaining signals.`);
   if (jevFail) warnings?.push(`Jev failed for ${jevFail} candidate(s); their scores use the remaining signals.`);
   return { engine, llmFail, jevFail };
+}
+
+/** Short, user-facing reason a candidate wasn't scored by the configured engine. */
+function fallbackReason(c, configured) {
+  const err = (configured === 'jev' || configured === 'hybrid') && c.meta.jevError ? c.meta.jevError : c.meta.llmError || c.meta.jevError;
+  return err ? String(err).slice(0, 200) : 'The configured engine returned no scores.';
 }
 
 function autoWhy(c) {

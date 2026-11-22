@@ -128,8 +128,10 @@ export interface TopicValidation {
 }
 
 export interface TopicValidateRequest {
+  /** The project description. Users may paste relevant excerpts here (up to 12,000 characters). */
   description: string;
-  links: string[];
+  /** @deprecated Ignored by the server (pages were never fetched). Kept so older clients still validate. */
+  links?: string[];
   category: PersonaId;
   background?: string;
 }
@@ -161,12 +163,14 @@ export interface GeographyPref {
 export interface SearchRequest {
   category: PersonaId;
   description: string;
-  links: string[];
+  /** @deprecated Ignored. Older saved searches may still carry it. */
+  links?: string[];
   background?: string;
   /** The spec returned by /api/topic/validate (the user may have picked a suggestion first). */
   spec: ProjectSpec;
-  /** Selected objective labels exactly as shown (from PERSONAS[x].objectives). */
-  objectives: string[];
+  /** @deprecated The Objectives step was removed; ignored by the server. Older saved searches may carry it. */
+  objectives?: string[];
+  /** @deprecated See `objectives`. */
   objectiveOther?: string;
   target: Target;
   /** Ids from PERSONAS[x].individuals (empty when target === 'organizations'). */
@@ -218,7 +222,8 @@ export interface TabStatus {
 
 export interface SearchSummary {
   topic: string;
-  goal: string[];
+  /** @deprecated Present only on searches made before the Objectives step was removed. */
+  goal?: string[];
   individualTypes: string[];
   orgTypes: string[];
   customDiscipline?: string;
@@ -235,7 +240,11 @@ export interface SearchJob {
   request: SearchRequest;
   summary: SearchSummary;
   sample: boolean;
-  engines: { llm: 'deepseek' | 'heuristic'; ranker: RankerEngine; crustdata: Transport };
+  /**
+   * `ranker` is the CONFIGURED engine. `scored` counts which engine actually produced each ranked
+   * candidate's score (e.g. { jev: 48, llm: 2 } when Jev failed for two candidates and DeepSeek stepped in).
+   */
+  engines: { llm: 'deepseek' | 'heuristic'; ranker: RankerEngine; crustdata: Transport; scored?: Partial<Record<RankerEngine, number>> };
   tabs: Partial<Record<TabKey, TabStatus>>;
   credits: { crustdata: number; calls: number; cached: number };
   llmUsage: { calls: number; promptTokens: number; completionTokens: number };
@@ -298,7 +307,12 @@ export interface Ranking {
   evidence_references: { criterion: string; evidence: string[] }[];
   /** Jev yes/no decision signal (not a calibrated probability of collaboration success). */
   jev_decision: { question: string; probability: number | null } | null;
+  /** Engine that actually produced this candidate's criterion scores. */
   engine: RankerEngine;
+  /** Engine the server was configured to use (absent on searches made before this field existed). */
+  configured_engine?: RankerEngine;
+  /** Set when `engine` differs from `configured_engine`: what was tried, what scored instead, and why. */
+  fallback?: { from: RankerEngine; to: RankerEngine; reason: string } | null;
 }
 
 export interface CandidateMeta {
@@ -366,6 +380,25 @@ export interface OrganizationCandidate extends CandidateBase {
 }
 
 export type Candidate = IndividualCandidate | OrganizationCandidate;
+
+// ----------------------------------------------------------- work email ----
+/**
+ * Result of an on-demand work-email lookup (POST /api/search/:id/candidates/:cid/work-email).
+ * - found: business emails Crustdata returned for this person's matched professional profile
+ * - none: the person was matched but Crustdata has no business email on file (no credit charged)
+ * - unavailable: the lookup can't run (no matched profile, endpoint not on the Crustdata plan, no credits)
+ * - error: the lookup was attempted and failed; the user may retry
+ */
+export interface WorkEmailLookup {
+  status: 'found' | 'none' | 'unavailable' | 'error';
+  emails: { email: string; status?: string; last_updated?: string }[];
+  message?: string;
+  /** Always "crustdata": show attribution next to any email. */
+  source: 'crustdata';
+  retrievedAt: string;
+  credits?: number;
+  sample?: boolean;
+}
 
 // ---------------------------------------------------------------- errors ----
 export interface ApiErrorBody { error: { message: string; code?: string; details?: unknown } }

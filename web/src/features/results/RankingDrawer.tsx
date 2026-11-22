@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import type { Candidate } from '../../api/types';
 import { Badge, Drawer, Notice, ScoreRing, Spinner } from '../../ui';
-import { criterionLabel, provenance, SOURCE_LABELS } from './labels';
+import { criterionLabel, provenance, RANKER_LABELS, SCORED_BY_LABELS, scoredBy, SOURCE_LABELS } from './labels';
 
 /** Required disclaimer shown in the drawer footer (brief: ranking details drawer). */
-export const DISCLAIMER = "Scores reflect evidence of relevant expertise. They don't indicate availability or willingness to collaborate, and no contact details are inferred.";
+export const DISCLAIMER = "Scores reflect evidence of relevant expertise. They don't indicate availability or willingness to collaborate. No contact details are inferred; work emails appear only when you ask, as returned by Crustdata.";
 
 /** Drawer for one candidate. Fetches the full record so the evidence list is complete. */
 export function RankingDrawer({ jobId, candidate, onClose }: { jobId: string; candidate: Candidate | null; onClose(): void }) {
@@ -48,13 +48,15 @@ function DrawerBody({ c, loading, error }: { c: Candidate; loading: boolean; err
           <strong>Overall {Math.round(r.final_score)}/100</strong>
           <span className="muted rs-small">Weighted sum of criterion scores (0–5), computed deterministically. Ranked #{c.rank} within its page.</span>
           <span className="row" style={{ gap: 6 }}>
-            <Badge tone="accent">Engine: {r.engine}</Badge>
+            <Badge tone={scoredBy(r).tone}>{scoredBy(r).text}</Badge>
+            {r.configured_engine && <Badge>Configured: {RANKER_LABELS[r.configured_engine] ?? r.configured_engine}</Badge>}
             <Badge>Confidence: {r.confidence}</Badge>
             {c.meta.sample && <Badge tone="sample">Sample data</Badge>}
           </span>
         </div>
       </div>
 
+      {r.fallback && <Notice tone="warning" title="Fallback scorer used">{SCORED_BY_LABELS[r.fallback.from] ?? r.fallback.from} didn't score this result ({r.fallback.reason}), so {SCORED_BY_LABELS[r.fallback.to] ?? r.fallback.to} scored it instead.</Notice>}
       {error && <Notice tone="warning">Couldn't load the full record ({error}). Showing what's on the page.</Notice>}
 
       <section>

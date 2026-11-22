@@ -1,5 +1,10 @@
 # Product Specification: AI-Powered Research & Engineering Collaboration Discovery
 
+> **Changes since this spec (Review 8, owner request):** no automatic profile discovery at sign-in (an optional,
+> editable "Your profile" step instead); no Objectives step or Goals summary; no project links; the same seven
+> geography options for every persona; on-demand work email; ranker provenance on every result.
+> `docs/REVIEWS.md` → Review 8 and `docs/API.md` are authoritative where they differ from the text below.
+
 > Source of truth for product behaviour. Every workstream must satisfy the parts of this
 > document it owns (see `docs/PLAN.md` for the ownership map). Implementation notes that
 > differ from the original wording: the LLM provider is **DeepSeek**, the reranker is

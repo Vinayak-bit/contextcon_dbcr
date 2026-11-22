@@ -5,6 +5,7 @@ export const REST_PATHS = {
   personSearch: '/person/search',
   personEnrich: '/person/enrich',
   personIdentify: '/person/identify',
+  personContact: '/person/contact/enrich',
   companySearch: '/company/search',
   companyEnrich: '/company/enrich',
   companyIdentify: '/company/identify',

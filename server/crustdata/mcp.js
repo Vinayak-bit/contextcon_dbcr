@@ -22,6 +22,7 @@ const OP_PATTERNS = {
   personSearch: [/^person[_./-]?search$/i, /^(people|person)[_./-]?search(?!.*(live|autocomplete|realtime))/i],
   personEnrich: [/^person[_./-]?enrich$/i, /^person[_./-]?enrich(?!.*(live|realtime|contact))/i],
   personIdentify: [/^person[_./-]?identify$/i, /person[_./-]?identify/i],
+  personContact: [/^person[_./-]?contact[_./-]?enrich$/i],
   companySearch: [/^company[_./-]?search$/i, /^compan(y|ies)[_./-]?search(?!.*(live|autocomplete|realtime))/i],
   companyEnrich: [/^company[_./-]?enrich$/i, /^company[_./-]?enrich(?!.*(live|realtime))/i],
   companyIdentify: [/^company[_./-]?identify$/i, /company[_./-]?identify/i],
@@ -29,7 +30,7 @@ const OP_PATTERNS = {
   webFetch: [/^web[_./-]?(fetch|enrich)(?:[_./-]?live)?$/i, /web[_./-]?(fetch|enrich)/i],
 };
 const DEFAULT_NAMES = {
-  personSearch: 'person_search', personEnrich: 'person_enrich', personIdentify: 'person_identify',
+  personSearch: 'person_search', personEnrich: 'person_enrich', personIdentify: 'person_identify', personContact: 'person_contact_enrich',
   companySearch: 'company_search', companyEnrich: 'company_enrich', companyIdentify: 'company_identify',
   webSearch: 'web_search_live', webFetch: 'web_enrich_live',
 };

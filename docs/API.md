@@ -36,9 +36,20 @@ and are the source of truth. The frontend calls these only through
 | `POST /auth/logout` | — | `{ ok: true }` |
 | `DELETE /me` | — | `{ ok: true }` (deletes the user and all stored profile data) |
 | `PUT /me/category` | `{ category: PersonaId }` | `Me` |
+| `PUT /me/consent` | `{ consent: boolean }` | `Me` (turning consent off also deletes the stored `profile` and its context) |
 
-## Profile discovery (spec §2)
+## Your profile (optional, every persona)
 
+Sign-in no longer runs automatic profile discovery (Review 8). The wizard's first step, **Your profile**,
+lets any user type or skip: role or background, institution or company, city and country, skills, and
+relevant work (`UserProfile.projects`). It is saved with `PUT /profile` only after `PUT /me/consent
+{ consent: true }`. A profile confirmed earlier through discovery (`source: 'crustdata'`) is kept and
+shown as an editable starting point. The profile is secondary context for topic refinement, geography
+prefill and ranking; the project description stays the primary signal.
+
+## Profile discovery (legacy, spec §2)
+
+The UI no longer calls these endpoints. They stay for older clients and existing data.
 At most **3 attempts** per user, counted server-side (`Me.discovery.attempts`).
 
 | Method & path | Body | Response | Notes |
@@ -48,7 +59,7 @@ At most **3 attempts** per user, counted server-side (`Me.discovery.attempts`).
 | `POST /profile/confirm` | `{ match_id }` | `Me` | Enriches the match and stores `UserProfile` (only if consent). Sets `discovery.status = 'confirmed'`. |
 | `POST /profile/links` | `LinksRequest` | `LinksResponse` | Optional links after no match. LinkedIn and Scholar go to identify, GitHub and X to search. Website is fetched for context only. Returned matches can be confirmed with `/profile/confirm`. Does not use an attempt. |
 | `POST /profile/skip` | — | `Me` | `discovery.status = 'skipped'`. |
-| `PUT /profile` | `Partial<UserProfile>` | `Me` | User edits stored fields (role, institution, city, country, skills …). |
+| `PUT /profile` | `Partial<UserProfile>` | `Me` | The "Your profile" step: role, institution, city, country, skills, relevant work (`projects`). Requires consent. |
 
 ## Organization profile (Company persona, step C1)
 
@@ -76,6 +87,20 @@ outside their profile. The UI sends `spec` back unchanged inside `SearchRequest`
 | `GET /search/:id/results?tab=individuals&page=1` | — | `ResultsPage` | Up to 50 ranked candidates. 404 if that page isn't built yet. |
 | `POST /search/:id/more` | `{ tab }` | `SearchJob` | Builds the next page from the remaining pool and Crustdata cursors. That tab returns to `running`. Poll until `pagesReady` increases. |
 | `GET /search/:id/candidates/:candidateId` | — | `Candidate` | Full candidate with all evidence. |
+| `POST /search/:id/candidates/:candidateId/work-email` | — | `WorkEmailLookup` | On demand only (the user clicks "View work email" on an individual). Calls Crustdata `person_contact_enrich` / `POST /person/contact/enrich` for business emails only. `status`: `found`, `none` (Crustdata has no business email), `unavailable` (no matched professional profile, endpoint not on the Crustdata plan, no credits, or not connected), `error` (lookup failed; not remembered, so the user can retry). Results are kept in memory for the search and never written to disk. 20 requests/min. |
+
+Request fields removed in Review 8: `SearchRequest.objectives`, `objectiveOther` and `links`, and
+`TopicValidateRequest.links`. The server ignores them, so older saved searches and drafts still reopen.
+`SummaryRow`/`SearchSummary.goal` is no longer produced. Legacy geography ids `same_city` / `same_country`
+are mapped to `my_city` / `my_country`. Every persona gets the same geography options (`GEO_OPTIONS` in
+`shared/catalog.js`), and geography is always a hard filter. Descriptions may be up to 12,000 characters
+so users can paste excerpts.
+
+Ranking provenance: `Ranking.configured_engine` is the ranker the server was set up to use, and
+`Ranking.engine` is the one that actually scored the candidate. When they differ, `Ranking.fallback =
+{ from, to, reason }` says why (for example `Jev 404: Not Found`). `SearchJob.engines.scored` counts
+candidates by the engine that actually scored them. `npm run check:ranker` verifies a live Jev
+success and a forced fallback.
 
 Pagination semantics: page *N* is retrieved, verified and ranked as its own batch after page
 *N−1*. Scores use the same rubric, so they are comparable, but candidates are **not** re-ranked

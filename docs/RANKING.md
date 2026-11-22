@@ -28,6 +28,11 @@ understanding: topic validation, the project spec, and evidence extraction. It d
 - If Jev fails for a candidate (after retries), that candidate is scored by the DeepSeek judge (`server/llm/judge.js`),
   and `ranking.engine` says `llm`. A job warning reports how many fell back.
 - With no `JEV_API_KEY`, the DeepSeek judge ranks. With neither key, a transparent keyword heuristic ranks.
+- Every result records `ranking.configured_engine` (what the server was set up to use) and `ranking.engine` (what
+  actually scored it). A fallback adds `ranking.fallback = { from, to, reason }`, a search warning, and a
+  "Scored by … (fallback)" badge in the UI. `job.engines.scored` counts results per actual engine.
+- `npm run check:ranker` checks both paths live: a valid Jev response with every criterion sourced from Jev, then a
+  forced Jev failure that must fall back to the DeepSeek judge (or the heuristic) and say so.
 - `RANKER=hybrid` (Jev + DeepSeek judge averaged per criterion, `HYBRID_JEV_WEIGHT`) and `RANKER=llm` remain available
   for experiments. They are not the default.
 

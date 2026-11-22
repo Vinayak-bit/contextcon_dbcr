@@ -1,5 +1,10 @@
 # Laptop 2 — Results, evidence & status UI
 
+> **Review 8 (owner request, 2026-11-22): Laptop 4 changed this folder.** Pull `main` before you continue.
+> The summary has no Goal row, cards and the drawer say which ranker actually scored each result (with any
+> fallback), and individuals get an on-demand **View work email** (`WorkEmail.tsx`). The brief below is updated.
+> See `docs/REVIEWS.md` → Review 8.
+
 You build everything the user sees **after** pressing Find Matches: live search progress, the
 Individuals/Organizations tabs, ranked result cards with scores and evidence, the detailed
 ranking explanation, pagination, constraint/exclusion notices with explicit "broaden" actions.
@@ -49,7 +54,7 @@ Placeholders with these signatures exist — replace their bodies.
 - `api.job(jobId)` on mount; poll every 1.5 s while any tab is `queued`/`running` (stop when all are `done`/`error`;
   stop polling when unmounted). Once a tab has `pagesReady ≥ 1`, show its page 1 via `api.results(jobId, tab, 1)`
   **even while the other tab is still running**.
-- Summary bar at top from `job.summary`: topic, goal, people types, organization types, custom discipline,
+- Summary bar at top from `job.summary`: topic, people types, organization types, custom discipline,
   geography, sizes, "unverified allowed" flag — plus **Edit search** (`onEditSearch(job.request)`) and **New search**.
 - If `job.sample`, show a persistent banner: *"Sample data — fictional people and organizations for trying the product.
   Connect Crustdata for real results."* and a `Badge tone="sample"` on every card whose `meta.sample` is true.
@@ -58,7 +63,8 @@ Placeholders with these signatures exist — replace their bodies.
 - Per tab: a stage stepper using `TabStatus.stage` / `stageLabel` (queued → searching → academic → prefilter → enriching →
   verifying → extracting → ranking → done), a progress bar when `progress` is present, and the latest `log` lines
   (collapsible). Errors: show `TabStatus.error` with a retry suggestion; `job.warnings` as dismissible notices.
-- Footer/aside: engines (`job.engines` — e.g. "Ranking: Jev"), Crustdata transport,
+- Footer/aside: engines — the configured ranker (`job.engines.ranker`, e.g. "Ranking (configured): Jev") **and** who actually
+  scored (`job.engines.scored`, e.g. "Scored by: 48 Jev · 2 DeepSeek judge (fallback)"), Crustdata transport,
   credits used (`job.credits.crustdata`, cached calls), LLM calls.
 
 ### Tabs & pagination (spec §12)
@@ -78,6 +84,8 @@ Rank, name, current role, institution/company, location, career stage, orientati
 `why_relevant`, top specializations (chips), up to 3 `relevant_work` + 2 `accomplishments` items **each with its
 evidence ids rendered as small links** (hover/click shows the evidence text; link to `evidence.url` when present),
 publications/projects counts, geography label (see below), verified profile links (`source_urls`), sample badge,
+a **"Scored by …"** badge from `ranking.engine` (marked *fallback* with `ranking.fallback.reason` as its title when
+`ranking.engine !== ranking.configured_engine`), the on-demand **View work email** control (below),
 "academic-only identity" badge when `meta.academicOnly`. Button **View ranking details** → drawer.
 
 ### Result card — organizations
@@ -101,8 +109,17 @@ parent institution — **say "HQ" vs "team/office" explicitly for organizations*
 - Full evidence list (`candidate.evidence`, or fetch `api.candidate(jobId, id)`): id, kind, text, link; highlight the
   ids cited in `evidence_references` grouped by criterion.
 - Provenance: `meta.retrievedAt` (formatted local time), `meta.transport`, `meta.extraction`, `meta.origin`.
+- Ranking provenance: show the configured and actual engine; when `ranking.fallback` is set, a notice with its reason.
 - Required disclaimer: *"Scores reflect evidence of relevant expertise. They don't indicate availability or willingness
-  to collaborate, and no contact details are inferred."*
+  to collaborate. No contact details are inferred; work emails appear only when you ask, as returned by Crustdata."*
+
+### Work email (individuals, on demand)
+- `WorkEmail.tsx`: nothing is fetched until the user clicks **View work email** → `api.workEmail(jobId, candidateId)`.
+  Loading a shortlist spends **zero** contact credits.
+- Show only what Crustdata returns: business emails as `mailto:` links with their status, and "Work email via
+  Crustdata · <time>" (plus "sample data" when `sample`). Distinct states: `none` (no work email on file),
+  `unavailable` (no matched professional profile, not on the Crustdata plan, no credits, not connected), `error`
+  (show the message and a **Retry**). People with no matched professional profile show that instead of a button.
 
 ### Exclusions & broadening (spec §6, §7 — never broaden silently)
 - Show `ResultsPage.excluded` as a compact line: "Excluded on this page: 7 outside selected geography, 5 location
@@ -149,5 +166,6 @@ produces several pages), the drawer, the include-unverified rerun, and the Conne
 - [ ] Progress, tabs, cards (both kinds), criterion bars, why-relevant, evidence links, drawer, provenance, disclaimer.
 - [ ] Pagination incl. load-more and the within-page ranking note; stable ordering.
 - [ ] Exclusion counts + explicit, confirmed broadening; no automatic widening.
-- [ ] Sample-data labelling; engine/credit display; ConnectionStatus incl. OAuth connect.
+- [ ] Sample-data labelling; engine/credit display (configured vs actual ranker); ConnectionStatus incl. OAuth connect.
+- [ ] Work email on demand with found / none / unavailable / error states.
 - [ ] `npm run check` passes; PR from `laptop-2/results-ui` with screenshots (desktop + mobile).

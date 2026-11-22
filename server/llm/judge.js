@@ -9,7 +9,7 @@ const RUBRIC_TEXT = {
 - topic_similarity: does the person's actual work (projects, publications, experiments, implemented systems, documented contributions) directly relate to the user's niche problem? 5 = has demonstrably worked on this exact problem; 3 = related problem with overlapping methods; 1 = same broad field only; 0 = nothing related.
 - accomplishments: evidence of technical competence and impact appropriate to the field and career stage. Research: relevant publications, contribution quality, citations, results, patents. Engineering: systems designed or implemented, shipped products, open-source contributions, performance improvements, patents, documented results. Do not penalize engineers for lacking publications when publications are not central to their specialization. Normalize for career stage (a strong PhD student can score 4).
 - skills_overlap: demonstrated experience with the relevant algorithms, tools, systems, methodologies or practices the project needs.
-- role_suitability: fit for the requested relationship and selected candidate types — career stage, complementary expertise, mentoring/teaching experience, prior collaborations, other verified signals. Never infer willingness or availability; absence of evidence means a moderate score, not a low one.`,
+- role_suitability: fit with the candidate types the user selected, given their project — career stage, complementary expertise, mentoring/teaching experience, prior collaborations, other verified signals. Never infer willingness or availability; absence of evidence means a moderate score, not a low one.`,
   organization: `Criteria (score each 0–5, one decimal allowed):
 - topic_relevance: how closely the organization's products, research, engineering projects, technologies and teams align with the user's specific problem.
 - accomplishments: meaningful evidence of capability — products built and deployed, technical innovations, engineering achievements, publications, patents, open-source, specialized systems or services.
@@ -71,12 +71,13 @@ export function projectView(spec, prefs, userProfile) {
     core_topics: spec.core_topics,
     methods: spec.specific_methods,
     required_expertise: spec.required_expertise,
-    objective: (prefs.objectives || []).join('; ') || 'not specified',
+    project_description: prefs.description || spec.problem_statement,
     requested_people: prefs.individualTypeLabels || [],
     requested_organizations: prefs.orgTypeLabels || [],
     preferences: prefs.preferences || {},
     organization_size_preference: prefs.sizes?.length ? prefs.sizes : ['any'],
-    user_profile: userProfile ? { role: userProfile.current_role, organization: userProfile.institution, career_stage: userProfile.career_stage, skills: (userProfile.skills || []).slice(0, 15) } : null,
+    // Secondary context only: the project description above is the primary relevance signal.
+    user_profile: userProfile ? { role: userProfile.current_role, organization: userProfile.institution, career_stage: userProfile.career_stage, skills: (userProfile.skills || []).slice(0, 15), relevant_work: (userProfile.projects || []).slice(0, 3) } : null,
   };
 }
 

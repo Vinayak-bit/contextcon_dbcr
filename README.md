@@ -31,7 +31,8 @@ npm start                     # http://localhost:8787
 ```
 
 Other scripts: `npm test` (backend tests), `npm run check` (typecheck + tests + build),
-`npm run benchmark:rankers` (compare rankers on saved real searches).
+`npm run benchmark:rankers` (compare rankers on saved real searches), `npm run check:ranker` (live check that Jev
+scores and that a Jev failure falls back visibly; uses a few Jev calls).
 
 ## Configuration (`.env`)
 
@@ -59,16 +60,17 @@ usage in the UI.
 
 ## How a search works
 
-1. Login (name, email, consent) → optional profile discovery (email → Crustdata identify; name + affiliation → search;
-   at most 3 attempts; or add profile links; or skip).
-2. Pick a category → persona-specific wizard: describe the project → **topic validation** (too-broad topics get
-   suggestions) → goals → Individuals / Organizations / Both with explicit candidate-type checkboxes → (preferences,
-   organization size) → **geography** → summary → **Find Matches**.
+1. Login (name, email, consent). No automatic profile lookup.
+2. Pick a category → wizard: **Your profile** (optional: role, institution, city and country, skills, relevant work;
+   stored only with consent) → describe the project (paste excerpts if useful) → **topic validation** (too-broad topics
+   get suggestions) → Individuals / Organizations / Both with explicit candidate-type checkboxes → (preferences,
+   organization size) → **geography** (same seven options for everyone, a hard filter) → summary → **Find Matches**.
 3. Backend per results page: Crustdata search (people and organizations in parallel) → dedupe → preliminary filter →
    enrichment → **hard constraint checks** (geography, type, size; unverified excluded unless allowed) → DeepSeek
    evidence extraction → Jev scoring → deterministic final score → up to 50 ranked results per page.
-4. Results: separate tabs, score + criterion bars, why relevant, evidence with source links and retrieval timestamps,
-   and an explicit, never automatic, option to broaden constraints.
+4. Results: separate tabs, score + criterion bars, which ranker actually scored each result (and any fallback), why
+   relevant, evidence with source links and retrieval timestamps, an explicit, never automatic, option to broaden
+   constraints, and an on-demand work email (Crustdata business emails only; no credits until clicked).
 
 Full product requirements: [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md). HTTP API: [`docs/API.md`](docs/API.md).
 

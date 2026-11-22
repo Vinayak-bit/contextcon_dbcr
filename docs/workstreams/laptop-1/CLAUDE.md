@@ -1,6 +1,11 @@
 # Laptop 1 — Onboarding & search-setup UI
 
-You build everything the user sees **before** results: login, profile discovery, category
+> **Review 8 (owner request, 2026-11-22): Laptop 4 changed this folder.** Pull `main` before you continue.
+> Automatic profile discovery, the Objectives step and project links are gone. Every persona starts with an
+> optional, editable **Your profile** step (`profile.tsx`) and gets the same seven geography options. The brief
+> below is updated to match. See `docs/REVIEWS.md` → Review 8.
+
+You build everything the user sees **before** results: login, the optional "Your profile" step, category
 selection, the five persona-specific wizards, topic validation and refinement, candidate-type,
 size and geography selection, and the search summary with **Find Matches**.
 
@@ -47,31 +52,21 @@ results screen when you call `onSearchStarted`.
 ## Screens and acceptance criteria
 
 ### 1. Login (spec §2)
-- Fields: name, email, and a consent checkbox: *"Use my name and email to find my professional
-  profile and personalize results. Stored only to improve relevance — never used for
-  authentication."* Login works without consent, but then profile discovery is skipped (explain why).
+- Fields: name, email, and a consent toggle: *"Store the profile details I add to personalize results."*
+  Login works without consent; the profile step then asks for consent before saving anything.
 - `api.login({name,email,consent})` → `onMeChange(me)`. Show field errors from `ApiError` (code `validation`).
-- If `me` already exists on load, skip ahead to the first incomplete step:
-  discovery (`me.discovery.status === 'pending'`), then category (`me.category === null`), then the wizard.
+- If `me` already exists on load, go to category (`me.category === null`), then the wizard. **No automatic
+  profile lookup** after sign-in. Sessions work as before.
 
-### 2. Profile discovery (spec §2): max 3 attempts, counted by the server
-- **Attempt 1** runs automatically: `api.discover({method:'email'})`. Show a spinner ("Looking for your professional profile…").
-- Show **the most likely match** (`matches[0]`) as a card: name, headline, current title, organization,
-  location, profile link (opens in a new tab), a `sample` badge if `match.sample`. Ask
-  **"Is this your professional profile?"** with **Yes, that's me** / **No, not me**.
-  - Yes → `api.confirmProfile(match_id)` → `onMeChange(me)`. Show the stored summary (role, institution, city/country,
-    skills) with inline edit (`api.updateProfile`) and the note *"Used for personalization and relevance only."*
-  - No → `api.rejectProfile(match_id)`, then the next attempt.
-- **Attempts 2 and 3:** a small form with name (prefilled) and affiliation (institution or company), then
-  `api.discover({method:'name', name, affiliation})`. Show "Attempt 2 of 3" etc. using `attemptsLeft`.
-- Zero matches still counts as an attempt. Show `note` and move to the next attempt form.
-- After 3 rejected or empty attempts (or 409 `attempts_exhausted`), show the **optional links form**:
-  LinkedIn, GitHub, Google Scholar, X, personal website/portfolio (all optional, URL-validated) →
-  `api.submitLinks(...)`. If it returns matches, offer them for confirmation the same way. Show
-  `context[]` items as "added as context".
-- **Skip** is visible at every point (`api.skipProfile()`). With `consent === false`, skip discovery automatically.
-- Network or Crustdata errors: code `crustdata_auth_required` means you show a short notice. The header
-  has a Connect button, which Laptop 2 builds. Offer **"Try with sample data"** (`sample: true`) and **Skip**.
+### 2. Your profile (first wizard step, every persona, optional)
+- `profile.tsx` → `ProfileStep`. Fields: role or background, institution or company, city, country, skills
+  (comma-separated) and relevant work (one item per line → `UserProfile.projects`).
+- Prefill from `me.profile`. A profile confirmed earlier through discovery (`source === 'crustdata'`) is shown as an
+  editable starting point with a badge.
+- Saving needs the toggle "Store my profile to personalize results": `api.setConsent(true)` if needed, then
+  `api.updateProfile(...)`. **Skip** always works. "Remove saved profile" calls `api.setConsent(false)`, which deletes it.
+- The profile is secondary context (topic refinement, geography prefill, ranking). The project stays the main signal.
+- The old discovery endpoints (`/profile/discover`, `/confirm`, `/links`, `/skip`) are no longer used by the UI.
 
 ### 3. Category (spec §3)
 - Page title exactly **"How would you describe yourself?"**. Five large `SelectCard`s in `PERSONA_ORDER`
@@ -84,19 +79,19 @@ steps that apply to this persona. Back/Continue on every step, and the user can 
 
 | Step | Shown for | Details |
 |---|---|---|
+| Your profile | all (first step) | See §2 above. Optional; Skip moves on. |
 | Organization profile (C1) | `persona.orgProfile` (company) | Fields: organization name, type (Select: Startup, Company, Research lab, University lab, R&D team, Nonprofit, Other), website, primary technical domain, team size, location (city + country). **Look up** → `api.identifyOrg({name, website})` → choose a match to prefill, or **Continue without a record** (allowed). Save with `api.saveOrg(org)` (`matched` true/false). The step is optional: offer "I'm not representing an organization". |
 | Background (E1) | `persona.background` (other) | TextArea "Briefly describe your background or role". Sent as `background`. |
-| Describe | all | **Chat-style** input: a large TextArea with a send-style Continue button, placeholder `persona.describe.placeholder`, prompt `persona.describe.question`. Optional links list (add/remove URL rows) with hint `persona.describe.linksHint`. Continue → `api.validateTopic({description, links, category, background})`. |
+| Describe | all | **Chat-style** input: a large TextArea with a send-style Continue button, placeholder `persona.describe.placeholder`, prompt `persona.describe.question`. **No project links.** The TextArea is 10 rows and accepts up to 12,000 characters, so users can paste excerpts (abstracts, README sections, issue text). Continue → `api.validateTopic({description, category, background})`. |
 | Topic check | all | **Specific** (`is_specific`): show a compact "We understood" card (domain, problem statement, core topics, methods, required expertise) and continue. **Too broad:** say it needs refinement (`reason`), show `suggestions` as selectable chips/cards (tag those with `based_on === 'profile'` as "From your profile"), plus **Rewrite manually** (edit the text and re-validate). Picking a suggestion re-validates using that suggestion as the description. Never block a specific topic just because it's outside the user's profile. Keep the returned `spec` for the request. |
-| Objectives | all | Title `persona.objectivesTitle`. Multi-select checkboxes from `persona.objectives`. Selecting "Other" reveals a text field (`objectiveOther`). At least one is required. |
 | Who to find | all | Three large `SelectCard`s: **Individuals / Organizations / Both**. Then show **real checkbox groups**: "People I Want to Find" (`persona.individuals`) and/or "Organizations I Want to Find" (`persona.organizations`). With Both, show both groups, independently editable. Add select-all/none. If `persona.customDiscipline`, show a "Custom engineering discipline" text input in the people group (`customDiscipline`). Validation: each visible group needs ≥1 selection (a custom discipline counts for people). |
 | Additional preferences | `persona.preferences` (professor, independent) | Render `persona.preferences.groups`: `single` → RadioGroup, `multi` → CheckboxGroup, `text` → TextField. All optional. Send as `preferences[group.id]`. |
 | Organization size | target includes organizations | `ORG_SIZES` as multi-select checkboxes. "Any size" is exclusive (selecting it clears others and vice versa). Copy: *"Size indicates fit for your collaboration, not quality."* For the company persona this is its own step (C5). For others, show it as an optional step. |
-| Geography | all | Radio options = `persona.geography` mapped through `GEO_SCOPES[id].label`. Sub-inputs (required when shown): `my_institute` → institute name, prefilled from `me.profile.institution` or `me.organization.name`; `my_city`/`same_city` → city + country, prefilled from profile/org location; `my_country`/`same_country` → country Select (from `COUNTRIES`), prefilled; `another_country` → one country; `specific` → multi-select countries and/or regions (`REGIONS`); `hubs` → checkbox list of `RESEARCH_HUBS`. Two toggles: **Include candidates whose location or role can't be verified** (`allowUnverified`, default **off**, explain it widens results) and **Slightly favor closer matches inside this area** (`preferProximity`, default on for institute/city, off otherwise). |
-| Summary | all | Show the **exact**: topic (problem statement + core topics), goal(s), selected individual types (labels), custom discipline, organization types, geography restriction in words, sizes, unverified toggle. Each row has **Edit**, which jumps to its step. Big **Find Matches** button. |
+| Geography | all | Radio options = `persona.geography` (the same `GEO_OPTIONS` for every persona: institution or organization, city, country, another country, specific countries or regions, research hubs, worldwide) mapped through `GEO_SCOPES[id].label`. Legacy `same_city`/`same_country` from older searches display as `my_city`/`my_country` (`canonicalGeoOption`). Ask for any value the profile or organization can't prefill; geography is always a hard filter. Sub-inputs (required when shown): `my_institute` → institute name, prefilled from `me.profile.institution` or `me.organization.name`; `my_city`/`same_city` → city + country, prefilled from profile/org location; `my_country`/`same_country` → country Select (from `COUNTRIES`), prefilled; `another_country` → one country; `specific` → multi-select countries and/or regions (`REGIONS`); `hubs` → checkbox list of `RESEARCH_HUBS`. Two toggles: **Include candidates whose location or role can't be verified** (`allowUnverified`, default **off**, explain it widens results) and **Slightly favor closer matches inside this area** (`preferProximity`, default on for institute/city, off otherwise). |
+| Summary | all | Show the **exact**: topic (problem statement + core topics), your profile (or "Not added"), selected individual types (labels), custom discipline, organization types, geography restriction in words, sizes, unverified toggle. Each row has **Edit**, which jumps to its step. Big **Find Matches** button. |
 
 **Find Matches:** build `SearchRequest` (see `types.ts`; ids, not labels, for types/sizes/hubs;
-objective labels as shown) → `api.startSearch(req)` → `onSearchStarted(jobId, req)`.
+no objectives or links) → `api.startSearch(req)` → `onSearchStarted(jobId, req)`.
 - 400 `validation`: show the message on the summary.
 - 409 `crustdata_auth_required`: explain that live data needs Crustdata, and offer **Use sample data**
   (resubmit with `sample: true`) or connect via the header button.
@@ -131,7 +126,7 @@ sub-inputs. Confirm the request body in DevTools → Network matches `SearchRequ
 
 ## Definition of done
 - [ ] All screens above work for all five personas with copy from `shared/catalog.js`.
-- [ ] Discovery: email attempt, name+affiliation attempts, max 3, confirm/reject, links form, skip, edit stored profile.
+- [ ] Your profile: enter, edit, skip, save only with consent, remove. No automatic discovery after sign-in.
 - [ ] Topic validation with suggestions + manual rewrite. The spec is carried into the request.
 - [ ] Every selection is a real control and appears in the summary and in the request body.
 - [ ] `editRequest` prefill works. Drafts persist safely.

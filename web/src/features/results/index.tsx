@@ -200,7 +200,7 @@ export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: Result
                 </EmptyState>
               ) : (
                 <ol className="rs-cards">
-                  {page.candidates.map((c) => <li key={c.candidate_id}><CandidateCard candidate={c} onDetails={setDetails} /></li>)}
+                  {page.candidates.map((c) => <li key={c.candidate_id}><CandidateCard jobId={jobId} candidate={c} onDetails={setDetails} /></li>)}
                 </ol>
               )}
               <Pager
