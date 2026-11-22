@@ -2,6 +2,7 @@
 .st-root { position: relative; display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .st-trigger { display: flex; align-items: center; gap: 6px; border: 0; background: none; padding: 2px; font: inherit; cursor: pointer; border-radius: var(--radius-pill); min-width: 0; }
 .st-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill); font-size: .8rem; font-weight: 600; white-space: nowrap; border: 1px solid transparent; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+.st-short { display: none; }
 .st-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
 .st-chip--success { color: var(--success); background: var(--success-soft); }
 .st-chip--warning { color: var(--warning); background: var(--warning-soft); }
@@ -28,6 +29,9 @@
 @media (max-width: 640px) {
   .st-chip { max-width: 170px; padding: 3px 8px; }
   .st-prefix { display: none; }
+  /* Short label on phones; the full one stays readable to screen readers. */
+  .st-full { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .st-short { display: inline; }
   .st-connect-inline { display: none; }
   .st-popover { position: fixed; top: calc(var(--header-height) + 4px); left: 16px; right: 16px; width: auto; }
 }

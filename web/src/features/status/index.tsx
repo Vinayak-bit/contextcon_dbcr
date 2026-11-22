@@ -14,16 +14,16 @@ type Tone = 'success' | 'warning' | 'danger' | 'neutral' | 'sample' | 'accent' |
 const POLL_MS = 2000;
 const POLL_MAX_MS = 3 * 60 * 1000;
 
-/** Crustdata chip text + tone for a status. */
-export function crustdataChip(s: AppStatus): { text: string; tone: Tone } {
+/** Crustdata chip text (+ a short form for narrow screens) and tone for a status. */
+export function crustdataChip(s: AppStatus): { text: string; short: string; tone: Tone } {
   const c = s.crustdata;
-  if (c.mode === 'sample') return { text: 'Sample data mode', tone: 'sample' };
+  if (c.mode === 'sample') return { text: 'Sample data mode', short: 'Sample data', tone: 'sample' };
   const via = `${c.transport.toUpperCase()}${c.auth === 'api_key' ? ' · API key' : c.auth === 'oauth' ? ' · OAuth' : ''}`;
-  if (c.connected || c.state === 'connected') return { text: `Connected (${via})`, tone: 'success' };
-  if (c.state === 'connecting') return { text: 'Connecting…', tone: 'info' };
+  if (c.connected || c.state === 'connected') return { text: `Connected (${via})`, short: 'Connected', tone: 'success' };
+  if (c.state === 'connecting') return { text: 'Connecting…', short: 'Connecting…', tone: 'info' };
   // A missing REST key is an error state too; the popover names the cause.
-  if (c.state === 'error' || c.error || c.auth === 'missing_key') return { text: 'Error', tone: 'danger' };
-  return { text: 'Sign-in required', tone: 'warning' };
+  if (c.state === 'error' || c.error || c.auth === 'missing_key') return { text: 'Error', short: 'Error', tone: 'danger' };
+  return { text: 'Sign-in required', short: 'Sign in', tone: 'warning' };
 }
 
 /** AI chip text from the active ranker (Jev is the default engine; see docs/RANKING.md). */
@@ -122,7 +122,9 @@ export function ConnectionStatus({ status, onStatusChange }: ConnectionStatusPro
   return (
     <div className="st-root" ref={root}>
       <button type="button" className="st-trigger" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen((o) => !o)} title="Connection and AI engine details">
-        <span className={`st-chip st-chip--${cd.tone}`}><span className="st-dot" aria-hidden /><span className="st-prefix">Crustdata: </span>{waiting ? 'Waiting for sign-in…' : cd.text}</span>
+        <span className={`st-chip st-chip--${cd.tone}`}><span className="st-dot" aria-hidden /><span className="st-prefix">Crustdata: </span>
+          <span className="st-full">{waiting ? 'Waiting for sign-in…' : cd.text}</span>
+          <span className="st-short" aria-hidden>{waiting ? 'Waiting…' : cd.short}</span></span>
         <span className={`st-chip st-chip--${ai.tone} st-chip--ai`} title={status.llm.enabled ? 'DeepSeek handles understanding and evidence extraction' : 'No DeepSeek key: keyword heuristics handle understanding'}>{ai.text}</span>
       </button>
       {canConnect && !open && (
