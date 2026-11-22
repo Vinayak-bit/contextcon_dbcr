@@ -92,12 +92,21 @@ const EXCLUSION_LABELS: Record<keyof ExcludedCounts, string> = {
   duplicates: 'duplicates',
 };
 
-/** Non-zero exclusion counts as "7 outside selected geography" phrases. */
-export function exclusionPhrases(c: ExcludedCounts | undefined): string[] {
+/**
+ * Label for one exclusion reason on a tab. `unverified_role` means "role unverified" for people and
+ * "type or size unverified" for organizations (types.ts / API.md, docs/REVIEWS.md → Review 3).
+ */
+export function exclusionLabel(key: keyof ExcludedCounts, tab: TabKey): string {
+  if (key === 'unverified_role' && tab === 'organizations') return 'type or size unverified';
+  return EXCLUSION_LABELS[key];
+}
+
+/** Non-zero exclusion counts as "7 outside selected geography" phrases, labelled for the tab. */
+export function exclusionPhrases(c: ExcludedCounts | undefined, tab: TabKey): string[] {
   if (!c) return [];
   return (Object.keys(EXCLUSION_LABELS) as (keyof ExcludedCounts)[])
     .filter((k) => (c[k] ?? 0) > 0)
-    .map((k) => `${c[k]} ${EXCLUSION_LABELS[k]}`);
+    .map((k) => `${c[k]} ${exclusionLabel(k, tab)}`);
 }
 
 /** Total excluded for reasons the user could relax by allowing unverified candidates. */

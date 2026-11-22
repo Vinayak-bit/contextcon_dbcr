@@ -1,20 +1,20 @@
 // Exclusion counts and explicit, confirmed broadening (spec §6, §7). Nothing widens
 // without the user reading what changes and clicking to confirm.
 import { useEffect, useRef, useState } from 'react';
-import type { ExcludedCounts } from '../../api/types';
+import type { ExcludedCounts, TabKey } from '../../api/types';
 import { Button } from '../../ui';
 import { exclusionPhrases, unverifiedCount } from './labels';
 
-/** "Excluded on this page: …" line; renders nothing when every count is zero. */
-export function ExclusionLine({ counts, scope = 'this page' }: { counts: ExcludedCounts | undefined; scope?: string }) {
-  const phrases = exclusionPhrases(counts);
+/** "Excluded on this page: …" line, labelled for the tab; renders nothing when every count is zero. */
+export function ExclusionLine({ counts, tab, scope = 'this page' }: { counts: ExcludedCounts | undefined; tab: TabKey; scope?: string }) {
+  const phrases = exclusionPhrases(counts, tab);
   if (!phrases.length) return null;
   return <p className="rs-excluded"><strong>Excluded on {scope}:</strong> {phrases.join(', ')}.</p>;
 }
 
 /** Broadening actions: include unverified (with confirm) and change geography/types. */
-export function BroadenActions({ counts, allowUnverified, fewResults, onIncludeUnverified, onEdit }: {
-  counts: ExcludedCounts | undefined; allowUnverified: boolean; fewResults: boolean;
+export function BroadenActions({ counts, tab, allowUnverified, fewResults, onIncludeUnverified, onEdit }: {
+  counts: ExcludedCounts | undefined; tab: TabKey; allowUnverified: boolean; fewResults: boolean;
   onIncludeUnverified(): Promise<void>; onEdit(): void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -34,7 +34,10 @@ export function BroadenActions({ counts, allowUnverified, fewResults, onIncludeU
       >
         <p>This starts a <strong>new search</strong> with one change:</p>
         <ul>
-          <li>People and organizations whose <strong>location or role couldn't be verified</strong> will be included, labelled "Location unverified".</li>
+          {tab === 'organizations'
+            ? <li>Organizations whose <strong>location, type or size couldn't be verified</strong> will be included and labelled as unverified.</li>
+            : <li>People whose <strong>location or role couldn't be verified</strong> will be included and labelled as unverified.</li>}
+          <li>The setting applies to the whole new search, not just this tab.</li>
         </ul>
         <p>Everything else stays the same: topic, candidate types, sizes and geography. {n} candidate{n === 1 ? ' was' : 's were'} excluded for this reason so far.</p>
       </ConfirmDialog>
