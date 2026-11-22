@@ -20,7 +20,7 @@ the sections of [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) your brief names,
 A user describes the exact technical problem they're working on — research or engineering.
 The app finds the **people and organizations with the most relevant demonstrated expertise**,
 using Crustdata for retrieval, DeepSeek to understand the project and extract evidence, and
-DeepSeek + TypeSafe Jev to score candidates against fixed rubrics.
+TypeSafe Jev to score candidates against fixed rubrics.
 
 Flow: Login → Profile discovery (optional) → Category (Student / Professor / Company / Independent /
 Other) → Describe project → Topic validation → Individuals / Organizations / Both → candidate-type
@@ -46,7 +46,7 @@ Copy `.env.example` → `.env`. Ask the project owner for keys through a private
 | `CRUSTDATA_TRANSPORT` | `auto`/`mcp` (default — Crustdata MCP over Streamable HTTP), `rest`, or `sample` (offline fictional data, no credits). **Use `sample` while developing UI or pipeline logic.** |
 | `CRUSTDATA_API_KEY` | Optional. Sent as `Authorization: Bearer` to the MCP server. Without it, the UI's "Connect Crustdata" button runs OAuth. |
 | `DEEPSEEK_API_KEY` | LLM (topic validation, evidence extraction, judge). Without it, keyword heuristics are used. |
-| `JEV_API_KEY` | TypeSafe Jev reranker. With both LLM + Jev keys the ranker runs in `hybrid` mode. |
+| `JEV_API_KEY` | TypeSafe Jev — **the ranking engine** (DeepSeek handles understanding/extraction; its judge is only a fallback). See `docs/RANKING.md`. |
 
 ## Repository map (owner in brackets)
 

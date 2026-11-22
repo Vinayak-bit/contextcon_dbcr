@@ -13,9 +13,41 @@ export function activeRanker() {
   const llm = config.llm.enabled; const jev = config.jev.enabled;
   if (want === 'heuristic') return 'heuristic';
   if (want === 'llm') return llm ? 'llm' : 'heuristic';
-  if (want === 'jev') return jev ? 'jev' : llm ? 'llm' : 'heuristic';
-  if (want === 'hybrid' || want === 'auto') return llm && jev ? 'hybrid' : llm ? 'llm' : jev ? 'jev' : 'heuristic';
-  return 'heuristic';
+  if (want === 'hybrid') return llm && jev ? 'hybrid' : jev ? 'jev' : llm ? 'llm' : 'heuristic';
+  // Default (auto / jev): Jev is the production ranker; the LLM judge is the fallback.
+  return jev ? 'jev' : llm ? 'llm' : 'heuristic';
+}
+
+const TOPIC_KEY = { individual: 'topic_similarity', organization: 'topic_relevance' };
+
+/**
+ * Jev returns scores only. Explain them with Jev's own anchored levels plus the
+ * evidence-grounded items from extraction — nothing is generated or inferred here.
+ */
+function jevExplanation(c, jev, criteria, rk) {
+  const rows = criteria.filter((x) => Number.isFinite(jev.criterion_scores[x.key])).map((x) => ({ key: x.key, label: x.label, score: jev.criterion_scores[x.key], level: jev.levels?.[x.key] }));
+  const strengths = rows.filter((r) => r.score >= 3.5).map((r) => `${r.label}: ${r.level} (${r.score.toFixed(1)}/5)`);
+  const limitations = rows.filter((r) => r.score < 2.5).map((r) => `${r.label}: ${r.level} (${r.score.toFixed(1)}/5)`);
+  if (rk === 'individual') {
+    if (!c.publications?.length && !c.engineering_projects?.length) limitations.push('No publications or code projects were found in the available data.');
+    if (c.meta.academicOnly) limitations.push('Academic-only identity: no verified professional profile.');
+  } else if (c.employee_count == null) limitations.push('Organization size is not available.');
+  if (!c.meta.enriched) limitations.push('Only summary profile data was available.');
+
+  const work = (rk === 'individual' ? c.relevant_work : [...(c.research_and_engineering_work || []), ...(c.products_and_projects || [])]) || [];
+  const topic = rows.find((r) => r.key === TOPIC_KEY[rk]);
+  const why = [topic ? `${topic.level} (topic ${topic.score.toFixed(1)}/5).` : '', work.length ? `Evidence: ${work.slice(0, 2).map((w) => w.text).join(' ')}` : 'No directly related work was found in the evidence.'].filter(Boolean).join(' ');
+
+  const confs = Object.values(jev.confidences || {}).filter(Number.isFinite);
+  const avg = confs.length ? confs.reduce((a, b) => a + b, 0) / confs.length : 0;
+  let confidence = avg >= 0.8 ? 'high' : avg >= 0.6 ? 'medium' : 'low';
+  if (c.evidence.length < 5 && confidence === 'high') confidence = 'medium';
+
+  const refs = [
+    { criterion: TOPIC_KEY[rk], evidence: [...new Set(work.flatMap((w) => w.evidence))] },
+    { criterion: 'accomplishments', evidence: [...new Set((c.accomplishments || []).flatMap((w) => w.evidence))] },
+  ].filter((r) => r.evidence.length);
+  return { strengths, limitations, why_relevant: why, confidence, evidence_references: refs };
 }
 
 /** Final Score = Σ (weight × criterion_score / 5), weights renormalised over active criteria to sum to 100. */
@@ -59,14 +91,18 @@ export async function rankCandidates(candidates, { spec, prefs, userProfile, usa
   const engine = activeRanker();
   const w = clamp(config.hybridJevWeight, 0, 1);
   let done = 0; let llmFail = 0; let jevFail = 0;
-  const conc = Math.max(1, Math.min(config.llm.concurrency, config.jev.concurrency || 6));
+  // Candidate-level parallelism; DeepSeek and Jev each enforce their own in-flight caps.
+  const conc = Math.max(1, config.llm.concurrency);
   await mapLimit(candidates, conc, async (c) => {
     const rk = rubricKeyFor(c);
     const heur = heuristicScores(c, spec, prefs);
-    const [llm, jev] = await Promise.all([
-      engine === 'llm' || engine === 'hybrid' ? llmJudge({ candidate: c, spec, prefs, userProfile, usage }).catch((e) => { llmFail += 1; c.meta.llmError = e.message; return null; }) : null,
+    const judge = () => llmJudge({ candidate: c, spec, prefs, userProfile, usage }).catch((e) => { llmFail += 1; c.meta.llmError = e.message; return null; });
+    let [llm, jev] = await Promise.all([
+      engine === 'llm' || engine === 'hybrid' ? judge() : null,
       engine === 'jev' || engine === 'hybrid' ? jevScore({ candidate: c, spec, prefs, userProfile, usage: jevUsage }).catch((e) => { jevFail += 1; c.meta.jevError = e.message; return null; }) : null,
     ]);
+    // Jev is the production ranker; if it fails for this candidate, fall back to the LLM judge.
+    if (engine === 'jev' && !jev && config.llm.enabled) llm = await judge();
     const criteria = RUBRICS[rk];
     const scores = {}; const breakdown = [];
     for (const crit of criteria) {
@@ -80,7 +116,7 @@ export async function rankCandidates(candidates, { spec, prefs, userProfile, usa
       else if (Number.isFinite(j)) { v = j; source = 'jev'; }
       else { v = h; source = 'heuristic'; }
       scores[crit.key] = round(v, 2);
-      breakdown.push({ key: crit.key, label: crit.label, score: round(v, 1), source, llm: Number.isFinite(l) ? round(l, 1) : null, jev: Number.isFinite(j) ? round(j, 1) : null, heuristic: h, note: llm?.criterion_notes?.[crit.key] || '' });
+      breakdown.push({ key: crit.key, label: crit.label, score: round(v, 1), source, llm: Number.isFinite(l) ? round(l, 1) : null, jev: Number.isFinite(j) ? round(j, 1) : null, heuristic: h, note: llm?.criterion_notes?.[crit.key] || (jev?.levels?.[crit.key] ? `Jev: ${jev.levels[crit.key]}` : '') });
     }
     // Proximity: deterministic, and only when the user wants it and it can be computed.
     const prox = prefs.geography?.preferProximity ? proximityScore(c, userProfile, prefs.geography) : null;
@@ -91,16 +127,21 @@ export async function rankCandidates(candidates, { spec, prefs, userProfile, usa
     }
     const fs = finalScore(rk, scores, active);
     breakdown.forEach((b) => { b.weight = fs.weights[b.key] ?? 0; });
+    // Narrative: the LLM judge's own text when it ran, otherwise Jev levels + extracted evidence.
+    const story = llm
+      ? { strengths: llm.strengths, limitations: llm.limitations, why_relevant: llm.why_relevant, confidence: llm.confidence, evidence_references: llm.evidence_references }
+      : jev ? jevExplanation(c, jev, criteria, rk)
+        : { strengths: [], limitations: [], why_relevant: autoWhy(c), confidence: c.evidence.length > 6 ? 'medium' : 'low', evidence_references: [] };
     c.ranking = {
       final_score: fs.score,
       criterion_scores: scores,
       breakdown,
       proximity_included: Boolean(prox),
-      strengths: llm?.strengths?.slice(0, 5) || [],
-      limitations: llm?.limitations?.slice(0, 5) || [],
-      why_relevant: llm?.why_relevant || autoWhy(c),
-      confidence: llm?.confidence || (c.evidence.length > 6 ? 'medium' : 'low'),
-      evidence_references: llm?.evidence_references || [],
+      strengths: (story.strengths || []).slice(0, 5),
+      limitations: (story.limitations || []).slice(0, 5),
+      why_relevant: story.why_relevant || autoWhy(c),
+      confidence: story.confidence || 'low',
+      evidence_references: story.evidence_references || [],
       jev_decision: jev?.decision || null,
       engine: llm && jev ? 'hybrid' : llm ? 'llm' : jev ? 'jev' : 'heuristic',
     };

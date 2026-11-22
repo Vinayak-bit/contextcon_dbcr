@@ -7,7 +7,7 @@ import { chatJson } from '../llm/deepseek.js';
 import { extractEvidence } from '../llm/extract.js';
 import { activeRanker, rankCandidates, sortRanked } from '../ranking/index.js';
 import { jobStore } from '../store.js';
-import { HttpError, nowIso, uid } from '../util.js';
+import { HttpError, chunk, mapLimit, nowIso, uid } from '../util.js';
 import { resolvePrefs, summarize } from './prefs.js';
 import { retrieveIndividualsPage } from './individuals.js';
 import { retrieveOrganizationsPage } from './organizations.js';
@@ -102,10 +102,16 @@ async function buildPage(job, key) {
     const retrieve = key === 'individuals' ? retrieveIndividualsPage : retrieveOrganizationsPage;
     const { candidates, excluded, hasMore } = await retrieve(ctx, tab);
     if (candidates.length) {
-      ctx.stage('extracting', 'Extracting evidence', { done: 0, total: candidates.length });
-      await extractEvidence(candidates, job.spec, { usage: job.llmUsage, onProgress: (done, total) => { tab.progress = { done, total }; } });
-      ctx.stage('ranking', 'Scoring against the rubric', { done: 0, total: candidates.length });
-      await rankCandidates(candidates, { spec: job.spec, prefs: job.prefs, userProfile: job.userProfile, usage: job.llmUsage, jevUsage: job.jevUsage, warnings: job.warnings, onProgress: (done, total) => { tab.progress = { done, total }; } });
+      // Extraction and scoring overlap: each group of 4 is scored as soon as its evidence is extracted.
+      ctx.stage('ranking', 'Extracting evidence and scoring', { done: 0, total: candidates.length });
+      let scored = 0;
+      await mapLimit(chunk(candidates, 4), config.llm.concurrency, async (group) => {
+        await extractEvidence(group, job.spec, { usage: job.llmUsage });
+        await rankCandidates(group, {
+          spec: job.spec, prefs: job.prefs, userProfile: job.userProfile, usage: job.llmUsage, jevUsage: job.jevUsage, warnings: job.warnings,
+          onProgress: () => { scored += 1; tab.progress = { done: scored, total: candidates.length }; },
+        });
+      });
       sortRanked(candidates).forEach((c, i) => {
         c.rank = i + 1;
         if (c.candidate_type === 'organization' && !c.organization_type) c.organization_type = c.organization_type_llm || 'Organization';

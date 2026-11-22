@@ -6,6 +6,16 @@ import { config } from '../config.js';
 import { sleep } from '../util.js';
 import { projectView } from '../llm/judge.js';
 
+// Jev has its own concurrency cap so it never throttles the LLM side.
+let inFlight = 0;
+const waiters = [];
+async function acquire() {
+  if (inFlight < config.jev.concurrency) { inFlight += 1; return; }
+  await new Promise((r) => waiters.push(r));
+  inFlight += 1;
+}
+function release() { inFlight -= 1; waiters.shift()?.(); }
+
 const Q = {
   individual: {
     topic_similarity: {
@@ -66,6 +76,7 @@ export async function jevScore({ candidate, spec, prefs, userProfile, usage }) {
   let lastErr;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     let res;
+    await acquire();
     try {
       res = await fetch(config.jev.url, {
         method: 'POST',
@@ -73,8 +84,9 @@ export async function jevScore({ candidate, spec, prefs, userProfile, usage }) {
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(60_000),
       });
-    } catch (err) { lastErr = err; await sleep(800 * 2 ** attempt); continue; }
+    } catch (err) { release(); lastErr = err; await sleep(800 * 2 ** attempt); continue; }
     const json = await res.json().catch(() => null);
+    release();
     if (!res.ok) {
       lastErr = new Error(`Jev ${res.status}: ${json?.error?.message || json?.detail || json?.message || 'request failed'}`);
       if ([429, 500, 502, 503, 529].includes(res.status)) { await sleep((Number(res.headers.get('retry-after')) * 1000) || 1200 * 2 ** attempt); continue; }
@@ -82,12 +94,17 @@ export async function jevScore({ candidate, spec, prefs, userProfile, usage }) {
     }
     if (usage) { usage.calls = (usage.calls || 0) + 1; usage.inputTokens = (usage.inputTokens || 0) + (json.usage?.input_tokens || 0); }
     const answers = json.answers || {};
-    const criterion_scores = {}; const confidences = {};
+    const criterion_scores = {}; const confidences = {}; const levels = {};
     for (const k of Object.keys(Q[kind])) {
       const a = answers[k];
-      if (a && Number.isFinite(a.score)) { criterion_scores[k] = Math.max(0, Math.min(5, a.score)); confidences[k] = a.confidence; }
+      if (a && Number.isFinite(a.score)) {
+        criterion_scores[k] = Math.max(0, Math.min(5, a.score));
+        confidences[k] = a.confidence;
+        // The anchored level Jev's score lands on, e.g. "Closely matching work" — used to explain the score.
+        levels[k] = Q[kind][k].levels[Math.round(criterion_scores[k])];
+      }
     }
-    return { criterion_scores, confidences, decision: { question: DECISION[kind], probability: answers.decision?.noul ?? null }, model: json.model };
+    return { criterion_scores, confidences, levels, decision: { question: DECISION[kind], probability: answers.decision?.noul ?? null }, model: json.model };
   }
   throw lastErr || new Error('Jev request failed');
 }

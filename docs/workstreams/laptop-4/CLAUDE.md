@@ -29,8 +29,9 @@ Done and on the `laptop-4/foundation` branch (merge to `main` before others star
   + spec + suggestions, heuristic fallback), `extract.js` (evidence-grounded extraction; drops items citing unknown ids),
   `judge.js` (rubric judge, proximity excluded).
 - `server/ranking/`: `jev.js` (TypeSafe `/v1/systemone`; `score` questions with 6 anchored levels per criterion plus a `noul`
-  decision question; verified live), `index.js` (engine selection auto/hybrid/llm/jev/heuristic, deterministic
-  `finalScore` with weight redistribution, stable sort).
+  decision question; verified live), `index.js` (**Jev is the production ranker** — owner decision, see `docs/RANKING.md`;
+  DeepSeek judge only as per-candidate fallback; deterministic `finalScore` with weight redistribution; explanations built
+  from Jev's anchored levels + extracted evidence; stable sort).
 - `server/pipeline/normalize.js`: Crustdata → standardized candidates with evidence ids.
 - Contracts: `docs/API.md`, `web/src/api/types.ts`, `web/src/api/client.ts`, pipeline signatures in the Laptop 3 brief.
 - Server: `server/index.js`, `server/http.js` (cookie session, error envelope, rate limits), all routes in
@@ -43,11 +44,14 @@ Done and on the `laptop-4/foundation` branch (merge to `main` before others star
 - Tests: `server/test/ranking.test.js` (rubric math), `server/test/job.sample.test.js` (end-to-end job on sample data:
   both tabs, page 2 without repeats, country hard filter). `npm run check` passes.
 - Verified in a browser: login → Run sample search → DeepSeek topic validation → sample retrieval → extraction →
-  hybrid DeepSeek + Jev ranking → results for both tabs.
+  ranking → results for both tabs.
 
-Known issues / follow-ups:
-- Ranking speed: about 40 s for 16 candidates with `LLM_JUDGE_REASONING=low`. A 50-per-page tab will take minutes, so tune
-  `LLM_CONCURRENCY`, try `LLM_JUDGE_REASONING=none`, and show partial progress (Laptop 2 shows the stage + progress).
+Done on `laptop-4/api-integration`:
+- Speed: extraction overlaps scoring, DeepSeek concurrency 16, Jev has its own cap. A 50-candidate search now ranks in
+  ~6 s with Jev (was ~40 s for 16 candidates).
+- Jev made the default ranker. `server/scripts/benchmark-rankers.js` kept for later evaluation on **real** searches only.
+
+Known issues:
 - Sample data can produce two different fictional people with the same name (different ids). That's expected.
 
 Verified so far: DeepSeek (`deepseek-flash` JSON mode) and Jev (`jev-1.14.0` score + noul) respond correctly with the
@@ -64,11 +68,8 @@ completed. Do that as soon as access exists.
    DeepSeek summary as context).
 3. Live Crustdata smoke test over MCP (API key and OAuth). Confirm discovered tool names and parameter shapes, adjust
    `mcp.js` if the execute result envelope differs, and record the credits used per search.
-4. `server/scripts/benchmark-rankers.js` (`npm run benchmark:rankers`). Re-score cached candidates of recent jobs with
-   LLM-only, Jev-only and hybrid, then report Spearman/Kendall correlation, top-10 overlap and cost. This is the spec's
-   "benchmark Jev against LLM" requirement. Document the results in `docs/RANKING.md`.
-5. README for humans (setup, keys, transports, architecture, costs).
-6. Process `docs/CHANGE_REQUESTS.md` entries quickly. Others are blocked on you for contract changes.
+4. README for humans (setup, keys, transports, architecture, costs).
+5. Process `docs/CHANGE_REQUESTS.md` entries quickly. Others are blocked on you for contract changes.
 
 ## Phase 2 — integration (you lead)
 

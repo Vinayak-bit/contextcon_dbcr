@@ -58,7 +58,7 @@ Placeholders with these signatures exist — replace their bodies.
 - Per tab: a stage stepper using `TabStatus.stage` / `stageLabel` (queued → searching → academic → prefilter → enriching →
   verifying → extracting → ranking → done), a progress bar when `progress` is present, and the latest `log` lines
   (collapsible). Errors: show `TabStatus.error` with a retry suggestion; `job.warnings` as dismissible notices.
-- Footer/aside: engines (`job.engines` — e.g. "Ranking: Hybrid — DeepSeek judge + Jev"), Crustdata transport,
+- Footer/aside: engines (`job.engines` — e.g. "Ranking: Jev"), Crustdata transport,
   credits used (`job.credits.crustdata`, cached calls), LLM calls.
 
 ### Tabs & pagination (spec §12)
@@ -92,8 +92,8 @@ parent institution — **say "HQ" vs "team/office" explicitly for organizations*
 (only appears when the user allowed unverified); `not_required` → nothing or "Worldwide".
 
 ### Ranking details drawer (spec §10)
-- Breakdown table: criterion, effective weight, score (0–5), source (LLM / Jev / Hybrid / Heuristic / Rule) and, when
-  both exist, the LLM and Jev values side by side; the judge's note per criterion.
+- Breakdown table: criterion, effective weight, score (0–5), source (Jev / LLM / Hybrid / Heuristic / Rule) and the
+  per-criterion note (for Jev: its anchored level, e.g. "Jev: Closely matching work"); LLM and Jev values side by side if both exist.
 - If `proximity_included` is false, say "Geographic proximity not scored — weight redistributed."
 - Strengths, limitations, confidence (high/medium/low).
 - Jev decision (`jev_decision`): question + value as a bar, labelled **"decision signal (not a probability of
@@ -119,7 +119,7 @@ Zero results (with exclusion explanation), a tab that errored while the other su
 
 ## Connection status widget (header)
 - Compact chip(s): **Crustdata** — "Connected (MCP · API key|OAuth)", "Sign-in required", "Connecting…", "Error",
-  or "Sample data mode"; **AI** — "DeepSeek + Jev (hybrid)", "DeepSeek", "Jev", or "Heuristic (no AI keys)".
+  or "Sample data mode"; **AI** — "Ranking: Jev" (normal), "Ranking: DeepSeek", "Hybrid", or "Heuristic (no AI keys)".
 - Clicking opens a popover with details: endpoint, auth type, discovered tool names (`crustdata.tools`), error text,
   LLM models, Jev model.
 - **Connect Crustdata** (when `state` is `disconnected|needs_auth|error` and auth is `oauth`): `api.connectCrustdata()`;
