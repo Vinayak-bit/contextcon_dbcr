@@ -121,3 +121,17 @@ company_search 4.6, web_search 2. Results were relevant and verified (US/India),
 2. Crustdata currently rejects the `scholar-articles` and `scholar-articles-enriched` sources with 400 "Source temporarily
    disabled" (reported to Crustdata). Turn that into one friendly warning ("Academic paper search is temporarily
    unavailable; results come from profile search") instead of a raw message per query.
+
+## Review 5 (2026-11-22) — Laptop 2 follow-up
+
+`laptop-2/results-ui` at bd922dd ("Review 3 follow-up: label unverified_role per tab"). **Approved and merged.**
+- `exclusionLabel(key, tab)`: `unverified_role` reads "type or size unverified" in Organizations and "role unverified" in
+  Individuals. `ExclusionLine` / `BroadenActions` take the tab.
+- The include-unverified confirmation now describes the tab's case and states that it applies to the whole new search.
+
+Verified by Laptop 4: built on current `main`, only results-folder files changed, `npm run check` passes with 53 tests. In
+the browser (with an injected `unverified_role` count, since sample data never produces one) the Organizations tab
+showed "4 type or size unverified, 9 organization type not matching, 3 duplicates" and the org-specific dialog text.
+
+Open items: Laptop 3's two Review 4 follow-ups (role match must not rely on the headline alone when there is no current
+role; a single friendly warning while Crustdata's scholar sources are disabled).
