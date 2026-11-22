@@ -263,7 +263,59 @@ function HowItWorks() {
         </Step>
       </ol>
       <p className="lp-steps-note"><IllustrativeTag /> Numbers and candidates in these cards are examples, not live data.</p>
+      <Pipeline />
     </DarkBand>
+  );
+}
+
+/* ------------------------------------------------------------- pipeline --- */
+type Engine = 'deepseek' | 'crustdata' | 'jev' | 'you';
+const ENGINE_LABEL: Record<Engine, string> = { deepseek: 'DeepSeek', crustdata: 'Crustdata', jev: 'TypeSafe Jev', you: 'You decide' };
+const PIPELINE: { title: string; engines: Engine[]; points: string[] }[] = [
+  { title: 'Understand the problem', engines: ['deepseek'], points: [
+    'Checks that your description is specific and suggests sharper versions if not.',
+    'Turns it into a search spec: core topics, methods, required expertise and search queries. You approve it.',
+  ] },
+  { title: 'Find and verify candidates', engines: ['crustdata'], points: [
+    'Searches 1B+ people and 60M+ company profiles with the spec’s queries.',
+    'Enriches the shortlist with roles, papers, repositories and company details.',
+    'Applies your filters for geography, role, organization type and size exactly as set.',
+  ] },
+  { title: 'Extract the evidence', engines: ['deepseek'], points: [
+    'Turns each profile into short claims about relevant work and accomplishments.',
+    'Every claim cites an evidence id with its source link and retrieval time. Claims citing unknown evidence are dropped.',
+  ] },
+  { title: 'Rank with Jev', engines: ['jev'], points: [
+    'Scores each rubric criterion from 0 to 5 on fixed, anchored levels.',
+    'Final score = Σ weight × score ÷ 5. People: 40/25/15/15/5. Organizations: 45/25/15/10/5.',
+    'Ties break on Jev’s decision value, a relevance signal. If Jev fails, the DeepSeek judge scores that result and the card says so.',
+  ] },
+  { title: 'Reach out, on request', engines: ['crustdata', 'deepseek', 'you'], points: [
+    'View work email asks Crustdata for business emails only when you click.',
+    'Draft email writes from the person’s cited work, for a meeting, a research internship, an internship, a collaboration, or your own reason.',
+    'You copy the draft or open it in your email app. Overlap never sends email.',
+  ] },
+];
+
+function Pipeline() {
+  return (
+    <div className="lp-pipeline">
+      <h3 className="lp-pipeline__title">What runs at each step</h3>
+      <ol className="lp-flow" aria-label="How a search runs, in five steps">
+        {PIPELINE.map((step, i) => (
+          <li key={step.title} className="lp-flow__node">
+            <div className="lp-flow__head">
+              <span className="lp-flow__num mono">{String(i + 1).padStart(2, '0')}</span>
+              <span className="lp-flow__engines">
+                {step.engines.map((e) => <span key={e} className={`lp-eng lp-eng--${e}`}><i aria-hidden />{ENGINE_LABEL[e]}</span>)}
+              </span>
+            </div>
+            <h4>{step.title}</h4>
+            <ul>{step.points.map((pt) => <li key={pt}>{pt}</li>)}</ul>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 

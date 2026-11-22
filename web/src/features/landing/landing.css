@@ -204,3 +204,28 @@
   .lp-spec dd { margin-bottom: 10px; }
   .lp-result.ui-card--padded { padding: 20px; }
 }
+
+/* ===== pipeline flowchart (inside the dark band) ===== */
+.lp-pipeline { margin-top: var(--space-8); }
+.lp-pipeline__title { color: var(--ink); font-size: var(--fs-h3-lg); margin-bottom: var(--space-5); }
+.lp-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 28px; }
+.lp-flow__node { position: relative; padding: 18px 16px; border: 1px solid var(--band-line); border-radius: var(--r); background: color-mix(in srgb, var(--navy) 90%, transparent); box-shadow: var(--sh-2);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); min-width: 0; }
+.lp-flow__node:not(:last-child)::after { content: ""; position: absolute; top: 30px; right: -22px; width: 16px; height: 2px; background: var(--gradient-brand); }
+.lp-flow__node:not(:last-child)::before { content: ""; position: absolute; top: 26px; right: -23px; width: 8px; height: 8px; border-top: 2px solid var(--teal); border-right: 2px solid var(--teal); transform: rotate(45deg); }
+.lp-flow__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+.lp-flow__num { color: var(--accent-ink); font-size: 12px; padding-top: 3px; }
+.lp-flow__engines { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.lp-eng { display: inline-flex; align-items: center; gap: 5px; font: 500 var(--fs-micro) / 1 var(--mono); color: var(--ink); border: 1px solid var(--band-line-2); border-radius: var(--r-xs); padding: 4px 6px; white-space: nowrap; }
+.lp-eng i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.lp-eng--deepseek i { background: var(--accent); }
+.lp-eng--crustdata i { background: var(--teal); }
+.lp-eng--jev i { background: var(--violet); }
+.lp-eng--you i { background: var(--ink-2); }
+.lp-flow__node h4 { color: var(--ink); font-size: var(--fs-body-sm); font-weight: 620; margin: 0 0 var(--space-2); }
+.lp-flow__node ul { margin: 0; padding-left: var(--space-4); display: grid; gap: 6px; color: var(--ink-2); font-size: var(--fs-caption); line-height: 1.5; }
+@media (max-width: 1024px) {
+  .lp-flow { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+  .lp-flow__node:not(:last-child)::after { top: auto; bottom: -20px; right: auto; left: 28px; width: 2px; height: 14px; background: linear-gradient(var(--accent), var(--teal)); }
+  .lp-flow__node:not(:last-child)::before { top: auto; bottom: -21px; right: auto; left: 25px; transform: rotate(135deg); }
+}
