@@ -227,7 +227,9 @@
 
 /* ===== header: Fluent-style acrylic ===== */
 .ui-header { position: sticky; top: 0; z-index: 50; isolation: isolate;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .80), rgba(248, 250, 255, .70));
+  /* Tint is opaque enough that text behind stays unreadable even where the blur isn't drawn
+     (e.g. browsers without GPU compositing); the blur and grain add the acrylic look on top. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(248, 250, 255, .94));
   backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
   border-bottom: 1px solid rgba(255, 255, 255, .7);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 1px 0 rgba(20, 23, 31, .05), 0 8px 24px -12px rgba(20, 23, 31, .12); }
@@ -244,7 +246,7 @@ button.ui-header__plain { border: 0; background: none; cursor: pointer; font: in
 .ui-menu-btn { display: none; width: 40px; height: 40px; border-radius: var(--r); border: 1px solid rgba(255, 255, 255, .8); background: rgba(255, 255, 255, .5); backdrop-filter: blur(8px); cursor: pointer; align-items: center; justify-content: center; color: var(--ink); }
 .ui-menu-btn .ui-icon { width: 18px; height: 18px; }
 .ui-mobile-menu { display: none; }
-:root[data-theme='dark'] .ui-header { background: linear-gradient(180deg, rgba(28, 32, 44, .78), rgba(20, 23, 32, .68)); border-bottom-color: rgba(255, 255, 255, .08);
+:root[data-theme='dark'] .ui-header { background: linear-gradient(180deg, rgba(28, 32, 44, .96), rgba(20, 23, 32, .94)); border-bottom-color: rgba(255, 255, 255, .08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 24px -12px rgba(0, 0, 0, .5); }
 :root[data-theme='dark'] .ui-header::before { mix-blend-mode: overlay; opacity: .08; }
 :root[data-theme='dark'] .ui-header__links a:hover, :root[data-theme='dark'] .ui-header__plain:hover { background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
