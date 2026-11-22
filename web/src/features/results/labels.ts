@@ -3,6 +3,7 @@
 import { INDIVIDUAL_TYPES, ORG_TYPES, RUBRICS } from '@shared/catalog.js';
 import type { CandidateMeta, CriterionBreakdown, ExcludedCounts, GeoCheck, RankerEngine, StageKey, TabKey, Transport } from '../../api/types';
 
+/** Display names for the result tabs. */
 export const TAB_LABELS: Record<TabKey, string> = { individuals: 'Individuals', organizations: 'Organizations' };
 
 /** Pipeline stages shown in the per-tab stepper (organizations skip the academic step). */
@@ -73,8 +74,10 @@ export const RANKER_LABELS: Record<RankerEngine, string> = {
   heuristic: 'Heuristic (no AI keys)',
 };
 
+/** Display names for Crustdata transports. */
 export const TRANSPORT_LABELS: Record<Transport, string> = { mcp: 'MCP', rest: 'REST', sample: 'Sample data' };
 
+/** Display names for where a criterion score came from. */
 export const SOURCE_LABELS: Record<CriterionBreakdown['source'], string> = {
   llm: 'LLM', jev: 'Jev', hybrid: 'Hybrid', heuristic: 'Heuristic', rule: 'Rule',
 };
@@ -107,6 +110,7 @@ export function formatTime(iso: string | undefined): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/** Display names for an individual's research/engineering orientation. */
 export const ORIENTATION_LABELS: Record<string, string> = {
   research: 'Research', engineering: 'Engineering', both: 'Research + engineering', unclear: 'Orientation unclear',
 };

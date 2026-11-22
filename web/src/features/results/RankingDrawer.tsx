@@ -6,6 +6,7 @@ import type { Candidate } from '../../api/types';
 import { Badge, Drawer, Notice, ScoreRing, Spinner } from '../../ui';
 import { criterionLabel, provenance, SOURCE_LABELS } from './labels';
 
+/** Required disclaimer shown in the drawer footer (brief: ranking details drawer). */
 export const DISCLAIMER = "Scores reflect evidence of relevant expertise. They don't indicate availability or willingness to collaborate, and no contact details are inferred.";
 
 /** Drawer for one candidate. Fetches the full record so the evidence list is complete. */
@@ -101,7 +102,7 @@ function DrawerBody({ c, loading, error }: { c: Candidate; loading: boolean; err
                 <span>{r.jev_decision.probability.toFixed(2)}</span>
               </div>
             ) : <span className="muted rs-small">No value returned.</span>}
-            <span className="muted rs-small">Decision signal (not a probability of collaboration success).</span>
+            <span className="muted rs-small">decision signal (not a probability of collaboration success)</span>
           </div>
         ) : <p className="muted rs-small">Jev wasn't used for this candidate.</p>}
       </section>

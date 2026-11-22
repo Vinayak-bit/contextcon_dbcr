@@ -13,6 +13,7 @@ import { EnginesFooter, SummaryBar } from './Summary';
 import { TAB_LABELS } from './labels';
 import './results.css';
 
+/** Props App.tsx passes to the results screen (fixed contract, see the Laptop 2 brief). */
 export interface ResultsAppProps {
   jobId: string;
   onEditSearch(request: SearchRequest): void;
@@ -35,6 +36,10 @@ const SAMPLE_BANNER = 'Sample data — fictional people and organizations for tr
 const FEW_RESULTS = 10;
 const isActive = (t: TabStatus | undefined) => Boolean(t && (t.status === 'queued' || t.status === 'running'));
 
+/**
+ * Results screen for one search job: polls the job, shows per-tab progress, ranked cards,
+ * pagination (with load-more), the ranking drawer, exclusions and confirmed broadening.
+ */
 export function ResultsApp({ jobId, onEditSearch, onRerun, onNewSearch }: ResultsAppProps) {
   const [job, setJob] = useState<SearchJob | null>(null);
   const [jobError, setJobError] = useState<ApiError | Error | null>(null);

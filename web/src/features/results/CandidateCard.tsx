@@ -4,7 +4,7 @@ import { memo, useMemo } from 'react';
 import type { Candidate, GroundedItem, IndividualCandidate, OrganizationCandidate } from '../../api/types';
 import { Badge, Button, Card, Chip, ScoreBar, ScoreRing } from '../../ui';
 import { evidenceMap, GroundedLine, type EvidenceMap } from './Evidence';
-import { geoLabel, orNA, ORIENTATION_LABELS } from './labels';
+import { formatTime, geoLabel, orNA, ORIENTATION_LABELS } from './labels';
 
 const MAX_CHIPS = 6;
 
@@ -40,6 +40,7 @@ export const CandidateCard = memo(function CandidateCard({ candidate, onDetails 
           <footer className="rs-card__foot">
             <SourceLinks c={candidate} />
             <span className="spacer" />
+            <time className="muted rs-small" dateTime={candidate.meta.retrievedAt} title="When this record and its evidence were retrieved">Retrieved {formatTime(candidate.meta.retrievedAt)}</time>
             <Button size="sm" variant="secondary" onClick={() => onDetails(candidate)}>View ranking details</Button>
           </footer>
         </div>

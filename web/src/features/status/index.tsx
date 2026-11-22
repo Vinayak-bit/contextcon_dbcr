@@ -7,6 +7,7 @@ import type { AppStatus } from '../../api/types';
 import { Button } from '../../ui';
 import './status.css';
 
+/** Props App.tsx passes to the header widget (fixed contract, see the Laptop 2 brief). */
 export interface ConnectionStatusProps { status: AppStatus | null; onStatusChange(s: AppStatus): void }
 
 type Tone = 'success' | 'warning' | 'danger' | 'neutral' | 'sample' | 'accent' | 'info';
@@ -20,8 +21,8 @@ export function crustdataChip(s: AppStatus): { text: string; tone: Tone } {
   const via = `${c.transport.toUpperCase()}${c.auth === 'api_key' ? ' · API key' : c.auth === 'oauth' ? ' · OAuth' : ''}`;
   if (c.connected || c.state === 'connected') return { text: `Connected (${via})`, tone: 'success' };
   if (c.state === 'connecting') return { text: 'Connecting…', tone: 'info' };
-  if (c.state === 'error' || c.error) return { text: 'Error', tone: 'danger' };
-  if (c.auth === 'missing_key') return { text: 'API key missing', tone: 'danger' };
+  // A missing REST key is an error state too; the popover names the cause.
+  if (c.state === 'error' || c.error || c.auth === 'missing_key') return { text: 'Error', tone: 'danger' };
   return { text: 'Sign-in required', tone: 'warning' };
 }
 
@@ -35,6 +36,10 @@ export function aiChip(s: AppStatus): { text: string; tone: Tone } {
   }
 }
 
+/**
+ * Header widget: Crustdata connection and ranking-engine chips, a details popover,
+ * OAuth Connect (opens sign-in, polls /status every 2 s for up to 3 min) and Disconnect.
+ */
 export function ConnectionStatus({ status, onStatusChange }: ConnectionStatusProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -118,7 +123,7 @@ export function ConnectionStatus({ status, onStatusChange }: ConnectionStatusPro
     <div className="st-root" ref={root}>
       <button type="button" className="st-trigger" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen((o) => !o)} title="Connection and AI engine details">
         <span className={`st-chip st-chip--${cd.tone}`}><span className="st-dot" aria-hidden /><span className="st-prefix">Crustdata: </span>{waiting ? 'Waiting for sign-in…' : cd.text}</span>
-        <span className={`st-chip st-chip--${ai.tone} st-chip--ai`}>{ai.text}</span>
+        <span className={`st-chip st-chip--${ai.tone} st-chip--ai`} title={status.llm.enabled ? 'DeepSeek handles understanding and evidence extraction' : 'No DeepSeek key: keyword heuristics handle understanding'}>{ai.text}</span>
       </button>
       {canConnect && !open && (
         <Button size="sm" variant="secondary" loading={busy || waiting} onClick={connect} className="st-connect-inline">Connect Crustdata</Button>

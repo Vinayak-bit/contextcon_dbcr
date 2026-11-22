@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { EvidenceItem, GroundedItem } from '../../api/types';
 
+/** Evidence id (e.g. "E3") → evidence item, for one candidate. */
 export type EvidenceMap = Map<string, EvidenceItem>;
 
 /** Builds an id → evidence lookup for one candidate. */
