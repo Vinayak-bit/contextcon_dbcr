@@ -1,5 +1,7 @@
 /* Results feature styles (Laptop 2). Tokens only, no hard-coded colors. */
 .rs-root { gap: var(--space-4); }
+.rs-root h2, .rs-drawer h2 { font-size: var(--fs-h3-xl); }
+.rs-drawer h3 { font-size: var(--fs-h3); }
 .rs-center { display: grid; place-items: center; min-height: 30vh; }
 .rs-small { font-size: .85rem; }
 

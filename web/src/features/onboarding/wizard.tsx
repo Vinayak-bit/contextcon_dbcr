@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ORG_SIZES, PERSONAS } from '@shared/catalog.js';
 import { api, ApiError } from '../../api/client';
 import type { AppStatus, Me, PersonaId, SearchRequest, Target } from '../../api/types';
-import { Badge, Button, Card, CheckboxGroup, Notice, PageHeader, RadioGroup, SelectCard, Stepper, TextArea, TextField } from '../../ui';
+import { Badge, Button, Card, CheckboxGroup, Chip, Notice, PageHeader, RadioGroup, SelectCard, Stepper, TextArea, TextField } from '../../ui';
 import {
   clearDraft, DESCRIPTION_MAX, getSteps, includesOrgs, includesPeople, readDraft, saveDraft, searchRequest, stepError,
   type CheckedTopic, type Draft, type Persona, type Step,
@@ -47,14 +47,14 @@ function TopicReview({ topic, onSuggestion, onRewrite }: {
   const { spec } = topic;
   return (
     <div className="stack ob-section">
-      <h2>We understood</h2>
+      <div className="row"><h2>Your search spec</h2><span className="mono muted">draft · you approve before search</span></div>
       <div className="ob-match stack">
         <div><Badge tone="accent">{spec.domain}</Badge></div>
         <h3>{spec.problem_statement}</h3>
         <dl className="ob-facts">
-          <dt>Core topics</dt><dd>{spec.core_topics.join(', ') || '—'}</dd>
-          <dt>Methods</dt><dd>{spec.specific_methods.join(', ') || '—'}</dd>
-          <dt>Required expertise</dt><dd>{spec.required_expertise.join(', ') || '—'}</dd>
+          <dt>Core topics</dt><dd className="row">{spec.core_topics.length ? spec.core_topics.map((t) => <Chip key={t} tone="topic" label={t} />) : 'Not available'}</dd>
+          <dt>Methods</dt><dd className="row">{spec.specific_methods.length ? spec.specific_methods.map((t) => <Chip key={t} label={t} />) : 'Not available'}</dd>
+          <dt>Required expertise</dt><dd className="row">{spec.required_expertise.length ? spec.required_expertise.map((t) => <Chip key={t} label={t} />) : 'Not available'}</dd>
         </dl>
       </div>
     </div>
@@ -279,13 +279,13 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
               selected={draft.target === id} onSelect={() => chooseTarget(id)} />)}
           </div>
           {includesPeople(draft.target) && <div className="stack ob-rule">
-            <CheckboxGroup legend="People I Want to Find" options={persona.individuals} value={draft.individualTypes}
+            <CheckboxGroup legend="People I want to find" options={persona.individuals} value={draft.individualTypes}
               onChange={(individualTypes) => patch({ individualTypes })} selectAll />
             {'customDiscipline' in persona && <TextField label="Custom engineering discipline" value={draft.customDiscipline}
               onChange={(customDiscipline) => patch({ customDiscipline })} />}
           </div>}
           {includesOrgs(draft.target) && <div className="ob-rule">
-            <CheckboxGroup legend="Organizations I Want to Find" options={persona.organizations} value={draft.orgTypes}
+            <CheckboxGroup legend="Organizations I want to find" options={persona.organizations} value={draft.orgTypes}
               onChange={(orgTypes) => patch({ orgTypes })} selectAll />
           </div>}
         </div>
@@ -358,7 +358,7 @@ export function Wizard({ category, me, status, editRequest, onMeChange, onSearch
                 (authRequired || status?.crustdata.connected === false) && <Button variant="secondary"
                   disabled={Boolean(busy)} onClick={() => void startSearch(true)}>Use sample data</Button>}
               {canContinue && <Button size={step === 'summary' ? 'lg' : 'md'} loading={Boolean(busy)} onClick={advance}>
-                {step === 'summary' ? 'Find Matches' : step === 'describe' ? <>Continue <span aria-hidden>↑</span></> : 'Continue'}
+                {step === 'summary' ? 'Find matches' : step === 'describe' ? 'Check my topic' : 'Continue'}
               </Button>}
               {busy === 'topic' && !canContinue && <span role="status">Checking your topic…</span>}
             </div>}
