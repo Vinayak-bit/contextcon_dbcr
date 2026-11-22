@@ -62,16 +62,27 @@ export const CandidateCard = memo(function CandidateCard({ candidate, onDetails 
   );
 });
 
+const has = (v: string | null | undefined) => Boolean(v && v.trim() && v.trim().toLowerCase() !== 'unknown');
+
 function IndividualSub({ c }: { c: IndividualCandidate }) {
+  // Missing fields say "not available" once, instead of a row of placeholders (common for academic-only identities).
+  const work = has(c.current_role) || has(c.institution_or_company)
+    ? [orNA(c.current_role), orNA(c.institution_or_company)].join(' · ')
+    : 'Role and affiliation not available';
+  const place = [has(c.location) ? c.location : 'Location not available', has(c.career_stage) ? c.career_stage : ''].filter(Boolean).join(' · ');
   return (
     <p className="rs-sub">
-      <span>{orNA(c.current_role)}</span>
-      <span aria-hidden> · </span>
-      <span>{orNA(c.institution_or_company)}</span>
+      <span>{work}</span>
       <br />
-      <span className="muted">{orNA(c.location)}{c.career_stage ? ` · ${c.career_stage}` : ''}</span>
+      <span className="muted">{place}</span>
     </p>
   );
+}
+
+/** Drops items whose text is already shown in an earlier section of the same card (the drawer keeps all evidence). */
+function notShownIn(items: GroundedItem[] | undefined, shown: GroundedItem[] | undefined, shownMax: number): GroundedItem[] {
+  const seen = new Set((shown ?? []).slice(0, shownMax).map((s) => s.text.trim()));
+  return (items ?? []).filter((it) => !seen.has(it.text.trim()));
 }
 
 function OrgSub({ c }: { c: OrganizationCandidate }) {
@@ -114,7 +125,7 @@ function IndividualBody({ c, ev }: { c: IndividualCandidate; ev: EvidenceMap }) 
     <>
       <Specializations items={c.specializations} />
       <Claims title="Relevant work" items={c.relevant_work} max={3} ev={ev} />
-      <Claims title="Accomplishments" items={c.accomplishments} max={2} ev={ev} />
+      <Claims title="Accomplishments" items={notShownIn(c.accomplishments, c.relevant_work, 3)} max={2} ev={ev} />
       {empty && <p className="muted rs-small">No relevant work or accomplishments were extracted from the available evidence.</p>}
       <p className="rs-counts muted">
         {c.publications?.length ?? 0} publication{c.publications?.length === 1 ? '' : 's'} · {c.engineering_projects?.length ?? 0} engineering project{c.engineering_projects?.length === 1 ? '' : 's'}
@@ -129,7 +140,7 @@ function OrgBody({ c, ev }: { c: OrganizationCandidate; ev: EvidenceMap }) {
     <>
       <Specializations items={c.specializations} />
       <Claims title="Relevant work, products & research" items={work} max={3} ev={ev} />
-      <Claims title="Accomplishments" items={c.accomplishments} max={2} ev={ev} />
+      <Claims title="Accomplishments" items={notShownIn(c.accomplishments, work, 3)} max={2} ev={ev} />
       {!work.length && !c.accomplishments?.length && <p className="muted rs-small">No relevant work or accomplishments were extracted from the available evidence.</p>}
     </>
   );
