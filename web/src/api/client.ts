@@ -17,13 +17,22 @@ export class ApiError extends Error {
   }
 }
 
+/** Message shown when the browser can't reach the API at all (server stopped, wrong port, offline). */
+export const SERVER_UNREACHABLE = "Can't reach the Overlap server. Make sure it's running (npm run dev or npm start), then try again.";
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    method,
-    credentials: 'same-origin',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      method,
+      credentials: 'same-origin',
+      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    // fetch() rejects only on network failure; turn the browser's "Failed to fetch" into something actionable.
+    throw new ApiError(0, { error: { message: SERVER_UNREACHABLE, code: 'network' } }, SERVER_UNREACHABLE);
+  }
   const text = await res.text();
   let json: unknown = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }

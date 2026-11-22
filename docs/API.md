@@ -14,6 +14,8 @@ and are the source of truth. The frontend calls these only through
   - `validation` (400): show the message next to the form.
   - `attempts_exhausted` (409): profile discovery used all 3 attempts.
   - `not_found` (404).
+  - `network` (status 0, set by `client.ts`, not the server): the browser couldn't reach the API at all (server
+    stopped, wrong port, offline). Show the message as is. It tells the user to start the server.
 - Sample mode: any endpoint that hits Crustdata accepts `sample: true` (or the server runs with
   `CRUSTDATA_TRANSPORT=sample`). Sample records carry `sample: true` and must be labelled in the UI.
 
