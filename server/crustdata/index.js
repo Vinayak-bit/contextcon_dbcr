@@ -60,7 +60,10 @@ class Gateway {
    */
   async resolveSample(requested) {
     if (requested || this.mode === 'sample') return true;
-    if (this.mode === 'mcp' && !this.isLiveReady()) await this.live.connect();
+    // Connect implicitly only with existing credentials (API key or saved OAuth tokens).
+    // A first-time OAuth sign-in (which registers this app with Crustdata) happens only when
+    // the user clicks "Connect Crustdata" (POST /api/crustdata/connect).
+    if (this.mode === 'mcp' && !this.isLiveReady() && this.live.canAutoConnect()) await this.live.connect();
     if (!this.isLiveReady()) {
       const err = new Error('Live results need a Crustdata connection. Connect Crustdata in the header, or use sample data.');
       err.status = 409;

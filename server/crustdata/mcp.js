@@ -121,6 +121,9 @@ export class McpCrustdata {
     this.connecting = null;
   }
 
+  /** True when a connection can be made without user interaction (API key or saved OAuth tokens). */
+  canAutoConnect() { return Boolean(this.apiKey || this.oauth?.hasTokens()); }
+
   status() {
     return {
       transport: 'mcp',
