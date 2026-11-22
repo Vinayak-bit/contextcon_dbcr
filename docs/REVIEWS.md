@@ -207,3 +207,12 @@ Verified by Laptop 4:
   "My country · Australia", and re-runs. Work email shows found and "No work email on file" states.
 - Live work-email lookup on the real account returns `unavailable` (plan gate), spending 0 credits. A found email on
   live data could not be verified for that reason.
+
+### Review 8 addendum — engines footer zero counts (Laptop 4, owner question)
+
+"LLM calls: 0 / Jev calls: 0" in the results footer was accurate but misleading. DeepSeek runs at evidence extraction
+and Jev at ranking, both after the Crustdata search and enrichment, so the counters read 0 for the first part of every
+search. Backend counting was correct (a finished live search: 12 LLM calls, 47 Jev calls, 47 results scored by Jev).
+`EnginesFooter` in `web/src/features/results/Summary.tsx` (Laptop 2's folder; pull `main`) now explains a zero:
+"none yet (starts at evidence extraction / ranking)" while running, "not used" when the key isn't configured, and
+"none (no candidates passed the filters)" when nothing was ranked. The topic check isn't counted (tooltip says so).

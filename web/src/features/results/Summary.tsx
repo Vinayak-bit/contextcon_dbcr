@@ -36,9 +36,26 @@ export function SummaryBar({ job, onEdit, onNew }: { job: SearchJob; onEdit(): v
   );
 }
 
+/**
+ * Why a model-call counter is 0, so a bare "0" never reads as "this engine isn't used".
+ * DeepSeek runs at evidence extraction and Jev at ranking, both after Crustdata search and enrichment,
+ * so the counters stay at 0 for the first part of every search.
+ */
+function zeroCallsNote(job: SearchJob, kind: 'llm' | 'jev'): string {
+  const e = job.engines;
+  if (kind === 'llm' && e.llm !== 'deepseek') return 'not used (DeepSeek not configured)';
+  if (kind === 'jev' && e.ranker !== 'jev' && e.ranker !== 'hybrid') return `not used — ranker is ${RANKER_LABELS[e.ranker] ?? e.ranker}`;
+  const running = Object.values(job.tabs).some((t) => t.status === 'queued' || t.status === 'running');
+  if (running) return kind === 'llm' ? 'none yet (starts at evidence extraction)' : 'none yet (starts at ranking)';
+  const ranked = Object.values(e.scored ?? {}).reduce((sum, n) => sum + (n ?? 0), 0);
+  return ranked ? '0' : 'none (no candidates passed the filters)';
+}
+
 /** Engines, Crustdata transport, credits and model usage for this job. */
 export function EnginesFooter({ job }: { job: SearchJob }) {
   const e = job.engines;
+  const llm = job.llmUsage.calls;
+  const jev = job.jevUsage.calls;
   return (
     <footer className="rs-engines" aria-label="Engines and usage">
       <span><strong>Ranking (configured):</strong> {RANKER_LABELS[e.ranker] ?? e.ranker}</span>
@@ -46,8 +63,12 @@ export function EnginesFooter({ job }: { job: SearchJob }) {
       <span><strong>Understanding & evidence:</strong> {e.llm === 'deepseek' ? 'DeepSeek' : 'Keyword heuristics'}</span>
       <span><strong>Crustdata:</strong> {TRANSPORT_LABELS[e.crustdata] ?? e.crustdata}</span>
       <span><strong>Credits used:</strong> {job.credits.crustdata.toLocaleString()} ({job.credits.calls} calls, {job.credits.cached} cached)</span>
-      <span><strong>LLM calls:</strong> {job.llmUsage.calls}{job.llmUsage.calls > 0 && ` (${(job.llmUsage.promptTokens + job.llmUsage.completionTokens).toLocaleString()} tokens)`}</span>
-      <span><strong>Jev calls:</strong> {job.jevUsage.calls}</span>
+      <span title="DeepSeek calls made while building these results (evidence extraction, and judging if Jev falls back). The topic check before the search is not included.">
+        <strong>LLM calls:</strong> {llm > 0 ? `${llm} (${(job.llmUsage.promptTokens + job.llmUsage.completionTokens).toLocaleString()} tokens)` : zeroCallsNote(job, 'llm')}
+      </span>
+      <span title="TypeSafe Jev scoring calls, one per ranked candidate.">
+        <strong>Jev calls:</strong> {jev > 0 ? jev : zeroCallsNote(job, 'jev')}
+      </span>
     </footer>
   );
 }
