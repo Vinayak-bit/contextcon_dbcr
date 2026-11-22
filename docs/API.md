@@ -79,6 +79,10 @@ Pagination semantics: page *N* is retrieved, verified and ranked as its own batc
 *N−1*. Scores use the same rubric, so they are comparable, but candidates are **not** re-ranked
 globally across pages. `ResultsPage.note` carries the message to display.
 
+Exclusion counters (`ExcludedCounts`): every key is always present. `unverified_location` and `unverified_role` are the
+candidates that "Include unverified candidates" would add back. For organizations, `unverified_role` means **type or
+size unverified**, so label it per tab. The other keys are real mismatches or duplicates.
+
 Broadening constraints: the server never broadens. To include unverified candidates or widen
 geography, the UI shows the user what will change, then calls `POST /search` with a modified
 `SearchRequest` after the user explicitly agrees.

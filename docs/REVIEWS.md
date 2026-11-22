@@ -87,3 +87,23 @@ Found and fixed on the Laptop 4 side (`shared/catalog.js`, not Laptop 3's code):
 "Research Services" company, and the corporate R&D rules matched universities. Academic types now exclude
 privately held and public companies, and corporate R&D types exclude educational institutions. Laptop 3's change request (count
 lab-extraction LLM calls in `llmUsage`) is resolved in `job.js`.
+
+## Review 3 (2026-11-22) — Laptop 3 follow-up
+
+`laptop-3/retrieval-pipeline` at 04d6989 (merged `main`, plus 97b79a0 "Review fixes"). **Approved.**
+- Type matching: a type rule only counts a miss as a mismatch when the fields it relies on are recorded. Otherwise the
+  result is "unverified", which is safer for hard constraints.
+- Dedupe: same name + organization but different Crustdata person ids (or different company domains) stay separate,
+  with tests.
+- Dropped the ambiguous "america" alias for the United States.
+- Remembers a rejected search filter per query so later pages don't pair it with an unfiltered cursor.
+
+Verified by Laptop 4: fast-forwards onto `main`, and `npm run check` passes with 53 tests. Three constrained searches over two
+pages each (research hubs; India + 51–200 employees + custom discipline; "my institute") returned 427 results with
+**zero** constraint violations.
+
+Change requests resolved by Laptop 4: lab-extraction LLM usage is counted, and for organizations `unverified_role` is
+documented as "type or size unverified" (no new keys).
+
+**Laptop 2, small follow-up:** in `labels.ts`, label `unverified_role` per tab, as "role unverified" for Individuals and
+"type or size unverified" for Organizations. The include-unverified offer already counts it, so no other change is needed.

@@ -19,7 +19,7 @@ Template:
   usage accumulator, so those DeepSeek calls are missing from `SearchJob.llmUsage`. Low priority; nothing breaks.
 - Proposed signature / shape: `llm: { enabled, chatJson, usage: job.llmUsage }` in `makeCtx`. L3 already passes
   `usage: ctx.llm.usage` (undefined today, which chatJson tolerates).
-- Status: open
+- Status: done (L4, 19109c5): `makeCtx` passes `usage: job.llmUsage`.
 
 ## [L3 → L4, L2] Separate "unverified" exclusion keys for organization type and size — 2026-11-22
 - File(s): `web/src/api/types.ts` (`ExcludedCounts`), `web/src/features/results/labels.ts` (L2)
@@ -30,4 +30,7 @@ Template:
   offer appears). In the Organizations tab, that label currently reads "role unverified".
 - Proposed signature / shape: add `unverified_type: number; unverified_size: number` to `ExcludedCounts` (L3 switches
   to them as soon as they exist), or label `unverified_role` as "type/size unverified" in the Organizations tab.
-- Status: open
+- Status: done (L4, Review 3), using the second option. No new keys, because L2's `Record<keyof ExcludedCounts, …>` would
+  break. `unverified_role` is now documented in `types.ts` / `API.md` as "people: role, organizations: type or size
+  unverified". L3 keeps its current counting. L2 labels it per tab (see `docs/REVIEWS.md` → Review 3). The server now
+  fills every key on every page.

@@ -14,7 +14,8 @@ import { retrieveOrganizationsPage } from './organizations.js';
 
 const jobs = new Map();
 const STAGE_LABELS = { queued: 'Queued', searching: 'Searching', academic: 'Academic search', prefilter: 'Pre-filtering', enriching: 'Enriching profiles', verifying: 'Verifying constraints', extracting: 'Extracting evidence', ranking: 'Ranking', done: 'Done', error: 'Error' };
-const emptyExcluded = () => ({ geography: 0, unverified_location: 0, role: 0, unverified_role: 0, org_type: 0, size: 0, duplicates: 0 });
+/** Every ExcludedCounts key (web/src/api/types.ts), so clients never see a missing counter. */
+export const emptyExcluded = () => ({ geography: 0, unverified_location: 0, role: 0, unverified_role: 0, org_type: 0, size: 0, duplicates: 0 });
 
 function newTab() {
   return { status: 'queued', stage: 'queued', stageLabel: STAGE_LABELS.queued, pagesReady: 0, hasMore: true, log: [], excludedTotals: emptyExcluded(), pages: [], state: {}, page: 0 };
@@ -100,7 +101,8 @@ async function buildPage(job, key) {
   const ctx = makeCtx(job, key);
   try {
     const retrieve = key === 'individuals' ? retrieveIndividualsPage : retrieveOrganizationsPage;
-    const { candidates, excluded, hasMore } = await retrieve(ctx, tab);
+    const { candidates, excluded: rawExcluded, hasMore } = await retrieve(ctx, tab);
+    const excluded = { ...emptyExcluded(), ...rawExcluded };
     if (candidates.length) {
       // Extraction and scoring overlap: each group of 4 is scored as soon as its evidence is extracted.
       ctx.stage('ranking', 'Extracting evidence and scoring', { done: 0, total: candidates.length });

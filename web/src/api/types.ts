@@ -191,7 +191,12 @@ export type StageKey = 'queued' | 'searching' | 'academic' | 'prefilter' | 'enri
 export interface ExcludedCounts {
   geography: number;
   unverified_location: number;
+  /** People whose role didn't match the selected types. */
   role: number;
+  /**
+   * Couldn't be verified against the selected categories (relaxed by "Include unverified").
+   * People: role unverified. Organizations: type or size unverified, so label it per tab.
+   */
   unverified_role: number;
   org_type: number;
   size: number;
