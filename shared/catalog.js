@@ -48,14 +48,14 @@ export const INDIVIDUAL_TYPES = {
 // `match`: post-retrieval classifier used to enforce the selection.
 //   industries/types are case-insensitive substrings; headcount is [min,max].
 export const ORG_TYPES = {
-  universities: { label: 'Universities / Institutes', kind: 'academic', queryHint: 'university institute', match: { industries: ['higher education', 'education', 'research'], companyTypes: ['educational'], names: ['university', 'institute', 'college', 'polytechnic', 'école', 'universität'] } },
-  academic_institutes: { label: 'Academic Research Institutes', kind: 'academic', queryHint: 'research institute', match: { industries: ['research', 'higher education'], companyTypes: ['educational', 'nonprofit', 'government'], names: ['institute', 'centre', 'center', 'laboratory', 'university'] } },
-  academic_labs: { label: 'Academic Research Laboratories', kind: 'academic', queryHint: 'research lab', match: { industries: ['research', 'higher education'], companyTypes: ['educational'], names: ['lab', 'laboratory', 'group', 'center', 'centre', 'institute'] } },
+  universities: { label: 'Universities / Institutes', kind: 'academic', queryHint: 'university institute', match: { industries: ['higher education'], companyTypes: ['educational'], names: ['university', 'institute', 'college', 'polytechnic', 'école', 'universität'] } },
+  academic_institutes: { label: 'Academic Research Institutes', kind: 'academic', queryHint: 'research institute', match: { industries: ['research', 'higher education'], companyTypes: ['educational', 'nonprofit', 'government'], names: ['institute', 'centre', 'center', 'laboratory', 'university'], notTypes: ['privately held', 'public company', 'self-owned', 'self-employed'] } },
+  academic_labs: { label: 'Academic Research Laboratories', kind: 'academic', queryHint: 'research lab', match: { industries: ['research', 'higher education'], companyTypes: ['educational'], names: ['lab', 'laboratory', 'group', 'center', 'centre', 'institute'], notTypes: ['privately held', 'public company', 'self-owned', 'self-employed'] } },
   specialized_labs: { label: 'Specialized Research Laboratories', kind: 'academic', queryHint: 'research laboratory', match: { industries: ['research'], companyTypes: [], names: ['lab', 'laboratory', 'research', 'institute', 'center', 'centre'] } },
-  industrial_labs: { label: 'Industrial Research Laboratories', kind: 'company', queryHint: 'research lab R&D', match: { industries: ['research', 'technology', 'software', 'semiconductor', 'engineering'], names: ['research', 'labs', 'laboratory'], requireResearchSignal: true } },
-  corporate_rd: { label: 'Corporate R&D Teams', kind: 'company', queryHint: 'R&D', match: { minHeadcount: 200, requireResearchSignal: true } },
-  corporate_rd_labs: { label: 'Corporate R&D Laboratories', kind: 'company', queryHint: 'R&D laboratory', match: { minHeadcount: 200, requireResearchSignal: true } },
-  corporate_research_teams: { label: 'Corporate Research Teams', kind: 'company', queryHint: 'research', match: { minHeadcount: 200, requireResearchSignal: true } },
+  industrial_labs: { label: 'Industrial Research Laboratories', kind: 'company', queryHint: 'research lab R&D', match: { industries: ['research', 'technology', 'software', 'semiconductor', 'engineering'], names: ['research', 'labs', 'laboratory'], requireResearchSignal: true, notTypes: ['educational', 'government agency'] } },
+  corporate_rd: { label: 'Corporate R&D Teams', kind: 'company', queryHint: 'R&D', match: { minHeadcount: 200, requireResearchSignal: true, notTypes: ['educational', 'government agency'] } },
+  corporate_rd_labs: { label: 'Corporate R&D Laboratories', kind: 'company', queryHint: 'R&D laboratory', match: { minHeadcount: 200, requireResearchSignal: true, notTypes: ['educational', 'government agency'] } },
+  corporate_research_teams: { label: 'Corporate Research Teams', kind: 'company', queryHint: 'research', match: { minHeadcount: 200, requireResearchSignal: true, notTypes: ['educational', 'government agency'] } },
   startups: { label: 'Startups', kind: 'company', queryHint: 'startup', match: { maxHeadcount: 200, companyTypes: ['privately held', 'private', 'self-owned', 'partnership'], notTypes: ['educational', 'government'] } },
   deeptech_startups: { label: 'Deep-Tech Startups', kind: 'company', queryHint: 'deep tech startup', match: { maxHeadcount: 200, notTypes: ['educational', 'government'] } },
   tech_companies: { label: 'Technology Companies', kind: 'company', queryHint: 'technology company', match: { industries: ['software', 'technology', 'internet', 'computer', 'semiconductor', 'it services', 'electronics', 'telecommunications', 'robotics', 'hardware'], notTypes: ['educational'] } },
@@ -68,7 +68,7 @@ export const ORG_TYPES = {
   engineering_product_teams: { label: 'Engineering / Product Teams', kind: 'company', queryHint: 'engineering product', match: { industries: ['software', 'technology', 'engineering', 'internet'], notTypes: ['educational'] } },
   consulting_orgs: { label: 'Technical Consulting Organizations', kind: 'company', queryHint: 'technical consulting', match: { industries: ['consulting', 'services', 'advisory'], notTypes: ['educational'] } },
   independent_orgs: { label: 'Independent Technical Organizations', kind: 'company', queryHint: 'non-profit foundation consortium', match: { companyTypes: ['nonprofit', 'non profit', 'partnership', 'self-employed'], industries: ['non-profit', 'research', 'think tanks'] } },
-  independent_research_orgs: { label: 'Independent Research Organizations', kind: 'academic', queryHint: 'independent research organization', match: { companyTypes: ['nonprofit', 'non profit'], industries: ['research', 'non-profit', 'think tanks'] } },
+  independent_research_orgs: { label: 'Independent Research Organizations', kind: 'academic', queryHint: 'independent research organization', match: { companyTypes: ['nonprofit', 'non profit'], industries: ['research', 'non-profit', 'think tanks'], notTypes: ['privately held', 'public company'] } },
 };
 
 /* ------------------------------------------------------------------ */

@@ -88,7 +88,7 @@ function makeCtx(job, key) {
       if (tab.log.length > 60) tab.log.splice(0, tab.log.length - 60);
     },
     warnings: job.warnings,
-    llm: { enabled: config.llm.enabled, chatJson },
+    llm: { enabled: config.llm.enabled, chatJson, usage: job.llmUsage },
   };
 }
 
