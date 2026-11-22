@@ -32,7 +32,8 @@ function keys(c) {
     if (m.crustdata_company_id) out.push(`cid:${m.crustdata_company_id}`);
     if (m.domain) out.push(`dom:${String(m.domain).toLowerCase().replace(/^www\./, '')}`);
     const n = normOrg(c.name);
-    if (n) out.push(m.labFromWeb ? `lab:${n}|${normOrg(c.parent_institution)}` : `org:${n}`);
+    // Same name in different countries can be different organizations.
+    if (n) out.push(m.labFromWeb ? `lab:${n}|${normOrg(c.parent_institution)}` : `org:${n}|${normText(c.hq_detail?.country)}`);
     return out;
   }
   if (m.mergeInto) out.push(`id:${m.mergeInto}`);

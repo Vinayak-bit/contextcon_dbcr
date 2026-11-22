@@ -32,8 +32,18 @@ export function buildOrgQueries(spec, prefs) {
     if (base[i]) out.push(base[i]);
     if (hints[i]) out.push(hints[i]);
   }
+  // Ranked company search returns a single window, so later pages need further queries.
+  out.push(...(spec.related_topics || []).map((t) => String(t).trim()));
   const list = uniq(out);
   return list.length ? list : uniq([core].filter(Boolean));
+}
+
+const FILTERS_ONLY = '__filters__';
+/** Topic conditions for the filters-only search (which, unlike ranked search, paginates with cursors). */
+function topicFilter(spec) {
+  const topics = uniq([...(spec.core_topics || []), ...(spec.specific_methods || [])].map((t) => String(t).trim()).filter(Boolean)).slice(0, 4);
+  if (!topics.length) return null;
+  return { op: 'or', conditions: topics.map((value) => ({ field: 'taxonomy.professional_network_specialities', type: '(.)', value })) };
 }
 
 /** Cheap pre-enrichment relevance: term overlap with the spec plus search rank. */
@@ -48,21 +58,28 @@ function prefilterScore(c, spec) {
 /* ------------------------------------------------------------------ */
 /* Crustdata calls                                                     */
 /* ------------------------------------------------------------------ */
-async function searchCompanies(ctx, st, queries, filters) {
+/**
+ * Company search. Ranked items ({key, q}) return one window of ≤ 100 (no cursor);
+ * the filters-only item ({key: FILTERS_ONLY, f}) paginates with `cursor`.
+ */
+async function searchCompanies(ctx, st, items, filters, fields) {
   const { limits } = ctx;
-  const body = (q, f, cursor) => ({ search: { query: q, mode: 'hybrid' }, ...(f ? { filters: f } : {}), limit: Math.min(limits.searchLimitPerQuery, 100), ...(cursor ? { cursor } : {}) });
-  const run = (list) => ctx.crustdata.batch('companySearch', list.map((x) => body(x.q, x.f, x.cursor)), { sample: ctx.sample, meter: ctx.meter });
+  const limit = Math.min(limits.searchLimitPerQuery, 100);
+  const body = (x) => (x.key === FILTERS_ONLY
+    ? { filters: x.f, limit, fields, ...(x.cursor ? { cursor: x.cursor } : {}) }
+    : { search: { query: x.q, mode: 'hybrid' }, ...(x.f ? { filters: x.f } : {}), limit, fields });
+  const run = (list) => ctx.crustdata.batch('companySearch', list.map(body), { sample: ctx.sample, meter: ctx.meter });
 
-  const first = queries.map((q) => ({ q, f: filters, cursor: st.cursors[q] || undefined }));
+  const first = items.map((x) => ({ ...x, f: x.key === FILTERS_ONLY ? x.f : filters }));
   const results = await run(first);
   const retry = [];
   results.forEach((r, i) => {
     if (!(r instanceof Error)) return;
     const x = first[i];
     if (x.cursor && isCursorError(r)) { retry.push({ ...x, cursor: undefined, restarted: true }); return; }
-    if (r.status === 400 && x.f) {
+    if (r.status === 400 && x.f && x.key !== FILTERS_ONLY) {
       ctx.warnings.push(`Crustdata rejected an organization-search filter (${r.message}). Geography and size are still enforced after retrieval.`);
-      retry.push({ ...x, f: null, cursor: undefined });
+      retry.push({ ...x, f: null });
     }
   });
   const again = retry.length ? await run(retry) : [];
@@ -70,19 +87,21 @@ async function searchCompanies(ctx, st, queries, filters) {
   const out = [];
   const take = (x, r) => {
     if (r instanceof Error) {
-      st.cursors[x.q] = null;
+      st.cursors[x.key] = null;
       if (isCreditsError(r)) { st.creditsOut = true; ctx.warnings.push('Crustdata credits ran out; showing what was retrieved so far.'); }
+      else if (x.key === FILTERS_ONLY) ctx.log(`Filter-only organization search stopped: ${r.message}`);
       else ctx.warnings.push(`Organization search failed for "${x.q}": ${r.message}`);
       return;
     }
-    if (x.restarted) st.offsets[x.q] = 0;
+    if (x.restarted) st.offsets[x.key] = 0;
     const list = r.data?.companies || [];
-    const offset = st.offsets[x.q] || 0;
-    list.forEach((c, i) => out.push(companyToCandidate(c, { retrievedAt: r.retrievedAt, transport: r.transport, searchRank: offset + i + 1 })));
-    st.offsets[x.q] = offset + list.length;
-    st.cursors[x.q] = list.length ? r.data?.next_cursor || null : null;
+    const offset = st.offsets[x.key] || 0;
+    list.forEach((c, i) => out.push(companyToCandidate(c, { retrievedAt: r.retrievedAt, transport: r.transport, searchRank: offset + i + 1, origin: x.key === FILTERS_ONLY ? 'company_filter_search' : 'company_search' })));
+    st.offsets[x.key] = offset + list.length;
+    // Ranked search has no further window; the filters-only search follows its cursor.
+    st.cursors[x.key] = x.key === FILTERS_ONLY && list.length ? r.data?.next_cursor || null : null;
   };
-  first.forEach((x, i) => { if (!retry.some((y) => y.q === x.q)) take(x, results[i]); });
+  first.forEach((x, i) => { if (!retry.some((y) => y.key === x.key)) take(x, results[i]); });
   retry.forEach((x, k) => take(x, again[k]));
   return out;
 }
@@ -174,12 +193,19 @@ export async function retrieveOrganizationsPage(ctx, tab) {
 
   // 1. Search (skipped when the pool already holds enough for a full page).
   const fresh = [];
-  const active = queries.filter((q) => st.cursors[q] !== null).slice(0, limits.maxQueriesPerPage);
-  if (st.pool.length < perPage && active.length && !st.creditsOut) {
+  const filters = and(companyGeoFilters(geo), sizeFilter(prefs.sizes));
+  const items = queries.filter((q) => st.cursors[q] !== null).slice(0, limits.maxQueriesPerPage).map((q) => ({ key: q, q }));
+  // Once every ranked query has run, continue with a filters-only topic search (it supports cursors).
+  const topic = topicFilter(spec);
+  if (!items.length && topic && st.cursors[FILTERS_ONLY] !== null) items.push({ key: FILTERS_ONLY, f: and(filters, topic), cursor: st.cursors[FILTERS_ONLY] || undefined });
+  if (st.pool.length < perPage && items.length && !st.creditsOut) {
     ctx.stage('searching', 'Searching organizations');
-    const found = await searchCompanies(ctx, st, active, and(companyGeoFilters(geo), sizeFilter(prefs.sizes)));
+    // `locations` is free; headcount only when size or a headcount-based type must be checked.
+    const needHeadcount = prefs.sizes.length > 0 || (prefs.orgTypes || []).some((t) => t.match?.minHeadcount != null || t.match?.maxHeadcount != null);
+    const fields = ['crustdata_company_id', 'basic_info', 'locations', ...(needHeadcount ? ['headcount'] : [])];
+    const found = await searchCompanies(ctx, st, items, filters, fields);
     fresh.push(...found);
-    ctx.log(`Found ${found.length} organizations across ${active.length} quer${active.length === 1 ? 'y' : 'ies'}`);
+    ctx.log(`Found ${found.length} organizations across ${items.length} search${items.length === 1 ? '' : 'es'}`);
   }
 
   // 2. Labs / research groups (once, when an academic organization type is selected).
@@ -255,7 +281,7 @@ export async function retrieveOrganizationsPage(ctx, tab) {
     candidates.push(c);
   }
 
-  const hasMore = !st.creditsOut && (queries.some((q) => st.cursors[q] !== null) || st.pool.length > 0);
+  const hasMore = !st.creditsOut && (queries.some((q) => st.cursors[q] !== null) || (Boolean(topicFilter(spec)) && st.cursors[FILTERS_ONLY] !== null) || st.pool.length > 0);
   st.lastPage = { page: tab.page, considered, returned: candidates.length, pooled: st.pool.length, excluded: { ...excluded } };
   ctx.log(`Returned ${candidates.length} verified organizations; excluded ${Object.values(excluded).reduce((a, b) => a + b, 0)}`);
   return { candidates, excluded, hasMore };

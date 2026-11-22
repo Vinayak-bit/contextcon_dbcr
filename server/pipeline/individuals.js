@@ -41,25 +41,70 @@ function prefilterScore(c, spec) {
   const overlap = terms.length ? phraseCoverage(terms, text) : 0;
   const rank = Number.isFinite(c.meta?.searchRank) ? 1 / (1 + (c.meta.searchRank - 1) / 10) : 0.3;
   const papers = (c.publications || []).length ? Math.min(1, c.publications.length / 3) : 0;
-  return 3 * overlap + 0.8 * rank + 0.5 * papers;
+  const fit = FIT_BONUS[c.meta?.fit] ?? 0.2;
+  return 3 * overlap + 0.8 * rank + 0.5 * papers + fit;
 }
 
 /* ------------------------------------------------------------------ */
 /* Crustdata calls                                                     */
 /* ------------------------------------------------------------------ */
-async function searchPeople(ctx, st, queries, filters) {
-  const { limits } = ctx;
-  const body = (q, f, cursor) => ({ search: { query: q }, filters: f || NO_FILTER, limit: Math.min(limits.searchLimitPerQuery, 100), ...(cursor ? { cursor } : {}) });
-  const run = (list) => ctx.crustdata.batch('personSearch', list.map((x) => body(x.q, x.f, x.cursor)), { sample: ctx.sample, meter: ctx.meter });
+// Search returns only these groups (a response whitelist: without it every result bills
+// experience + education). `fit` is Crustdata's relevance tier for ranked search.
+const SEARCH_FIELDS = ['crustdata_person_id', 'basic_profile', 'social_handles', 'fit'];
+const FIT_BONUS = { strong: 1, possible: 0.4, weak: 0 };
+const NICHE_LANGUAGES = ['CUDA', 'Verilog', 'SystemVerilog', 'VHDL', 'Triton', 'Rust', 'Julia', 'Haskell', 'OCaml', 'Scala', 'Elixir', 'Erlang', 'Fortran', 'MATLAB', 'Solidity', 'Zig', 'Chisel', 'MLIR', 'OpenCL', 'Assembly'];
 
-  const first = queries.map((q) => ({ q, f: filters, cursor: st.cursors[q] || undefined }));
-  const results = await run(first);
+/** Values for `in` filters on research interests / dev topics (exact stored values, so several spellings). */
+function topicValues(spec) {
+  const list = uniq([...(spec.core_topics || []), ...(spec.specific_methods || [])].map((t) => String(t).trim()).filter((t) => t && t.length <= 60)).slice(0, 8);
+  const title = (t) => t.replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return { phrases: uniq(list.flatMap((t) => [t, t.toLowerCase(), title(t)])), tags: uniq(list.map((t) => t.toLowerCase().replace(/[^a-z0-9+#]+/g, '-').replace(/^-|-$/g, ''))).filter(Boolean) };
+}
+
+/**
+ * Additional pulls on research / developer-platform fields (they cover < 1% of profiles, so they
+ * are unioned with the main pull, never used alone). Run once, on the first page.
+ */
+function secondPulls(spec, prefs, baseFilters) {
+  const { phrases, tags } = topicValues(spec);
+  const q = (spec.search_queries || [])[0] || spec.problem_statement || '';
+  const out = [];
+  if (!q || !phrases.length) return out;
+  if (isResearchOriented(spec, prefs)) {
+    out.push({ key: '__research__', q, f: and(baseFilters, { op: 'or', conditions: [
+      { field: 'research_profiles.research_interests', type: 'in', value: phrases },
+      { field: 'research_profiles.articles.title', type: 'in', value: phrases },
+    ] }), noFallback: true, limit: 25 });
+  }
+  const engineering = /engineer/i.test(spec.domain || '') || (prefs.individualTypes || []).some((t) => t.orientation !== 'research');
+  if (engineering) {
+    const text = `${spec.problem_statement || ''} ${(spec.specific_methods || []).join(' ')} ${(spec.required_expertise || []).join(' ')}`.toLowerCase();
+    const langs = NICHE_LANGUAGES.filter((l) => new RegExp(`(^|[^a-z])${l.toLowerCase().replace(/[+]/g, '\\+')}([^a-z]|$)`).test(text));
+    out.push({ key: '__dev__', q, f: and(baseFilters, { op: 'or', conditions: [
+      { field: 'dev_platform_profiles.all_topics', type: 'in', value: tags },
+      ...(langs.length ? [{ field: 'dev_platform_profiles.all_languages', type: 'in', value: langs }] : []),
+    ] }), noFallback: true, limit: 25 });
+  }
+  return out;
+}
+
+/**
+ * Ranked person search for several pulls. Each item: { key, q, f, cursor?, noFallback?, limit? }.
+ * Top-level `mode: 'exact'` keeps hard filters exact (the default mode would OR-union them with
+ * constraints read from the query text, silently broadening the user's selections).
+ */
+async function searchPeople(ctx, st, items, fields) {
+  const { limits } = ctx;
+  const body = (x) => ({ search: { query: x.q, mode: 'hybrid' }, mode: 'exact', filters: x.f || NO_FILTER, limit: Math.min(x.limit || limits.searchLimitPerQuery, limits.searchLimitPerQuery, 100), fields, ...(x.cursor ? { cursor: x.cursor } : {}) });
+  const run = (list) => ctx.crustdata.batch('personSearch', list.map(body), { sample: ctx.sample, meter: ctx.meter });
+
+  const results = await run(items);
   const retry = [];
   results.forEach((r, i) => {
     if (!(r instanceof Error)) return;
-    const x = first[i];
+    const x = items[i];
     if (x.cursor && isCursorError(r)) { retry.push({ ...x, cursor: undefined, restarted: true }); return; }
-    if (r.status === 400 && x.f) {
+    if (r.status === 400 && x.f && !x.noFallback) {
       ctx.warnings.push(`Crustdata rejected a person-search filter (${r.message}). Geography and role are still enforced after retrieval.`);
       retry.push({ ...x, f: null, cursor: undefined });
     }
@@ -69,20 +114,25 @@ async function searchPeople(ctx, st, queries, filters) {
   const out = [];
   const take = (x, r) => {
     if (r instanceof Error) {
-      st.cursors[x.q] = null;
+      st.cursors[x.key] = null;
       if (isCreditsError(r)) { st.creditsOut = true; ctx.warnings.push('Crustdata credits ran out; showing what was retrieved so far.'); }
+      else if (x.noFallback) ctx.log(`Additional ${x.key === '__research__' ? 'research-profile' : 'developer-profile'} pull skipped: ${r.message}`);
       else if (r.status === 403) ctx.warnings.push(`Person search is not permitted on this Crustdata plan (${r.message}).`);
       else ctx.warnings.push(`Person search failed for "${x.q}": ${r.message}`);
       return;
     }
-    if (x.restarted) st.offsets[x.q] = 0;
+    if (x.restarted) st.offsets[x.key] = 0;
     const profiles = r.data?.profiles || [];
-    const offset = st.offsets[x.q] || 0;
-    profiles.forEach((p, i) => out.push(personToCandidate(p, { retrievedAt: r.retrievedAt, transport: r.transport, searchRank: offset + i + 1 })));
-    st.offsets[x.q] = offset + profiles.length;
-    st.cursors[x.q] = profiles.length ? r.data?.next_cursor || null : null;
+    const offset = st.offsets[x.key] || 0;
+    profiles.forEach((p, i) => {
+      const c = personToCandidate(p, { retrievedAt: r.retrievedAt, transport: r.transport, searchRank: offset + i + 1, origin: x.key === '__research__' ? 'research_profile_search' : x.key === '__dev__' ? 'dev_profile_search' : 'person_search' });
+      if (p.fit) c.meta.fit = String(p.fit).toLowerCase();
+      out.push(c);
+    });
+    st.offsets[x.key] = offset + profiles.length;
+    st.cursors[x.key] = profiles.length && !x.noFallback ? r.data?.next_cursor || null : null;
   };
-  first.forEach((x, i) => { const k = retry.findIndex((y) => y.q === x.q); if (k < 0) take(x, results[i]); });
+  items.forEach((x, i) => { if (!retry.some((y) => y.key === x.key)) take(x, results[i]); });
   retry.forEach((x, k) => take(x, again[k]));
   return out;
 }
@@ -197,12 +247,17 @@ export async function retrieveIndividualsPage(ctx, tab) {
   // 1. Search (skipped when the pool already holds enough for a full page).
   const fresh = [];
   const active = queries.filter((q) => st.cursors[q] !== null).slice(0, limits.maxQueriesPerPage);
-  if (st.pool.length < perPage && active.length && !st.creditsOut) {
+  const filters = and(personGeoFilters(geo), titleFilter(prefs.individualTypes, prefs.customDiscipline));
+  const extra = st.secondPullsDone ? [] : secondPulls(spec, prefs, filters);
+  if (st.pool.length < perPage && (active.length || extra.length) && !st.creditsOut) {
     ctx.stage('searching', 'Searching professional profiles');
-    const filters = and(personGeoFilters(geo), titleFilter(prefs.individualTypes, prefs.customDiscipline));
-    const found = await searchPeople(ctx, st, active, filters);
+    st.secondPullsDone = true;
+    // Institute scope needs current employers at search level; otherwise basic_profile is enough.
+    const fields = geo.scope === 'institute' ? [...SEARCH_FIELDS, 'experience'] : SEARCH_FIELDS;
+    const items = [...active.map((q) => ({ key: q, q, f: filters, cursor: st.cursors[q] || undefined })), ...extra];
+    const found = await searchPeople(ctx, st, items, fields);
     fresh.push(...found);
-    ctx.log(`Found ${found.length} profiles across ${active.length} quer${active.length === 1 ? 'y' : 'ies'}`);
+    ctx.log(`Found ${found.length} profiles across ${items.length} search pull${items.length === 1 ? '' : 's'}`);
   }
 
   // 2. Academic authors (once, research-oriented searches only).
@@ -225,11 +280,13 @@ export async function retrieveIndividualsPage(ctx, tab) {
     const g = verifyGeo(c, geo);
     const role = matchRoles(c, prefs.individualTypes, prefs.customDiscipline);
     const canEnrich = Boolean(c.meta?.linkedin) && !c.meta?.enriched;
-    if (g.status === 'mismatch') { excluded.geography += 1; markSeen(c); continue; }
+    // Search-level data has no schools, so an institute "mismatch" is only final after enrichment.
+    const geoPending = g.status === 'mismatch' && geo.scope === 'institute' && canEnrich;
+    if (g.status === 'mismatch' && !geoPending) { excluded.geography += 1; markSeen(c); continue; }
     if (role.status === 'mismatch') { excluded.role += 1; markSeen(c); continue; }
     if (g.status === 'unverified' && !allowU && !canEnrich) { excluded.unverified_location += 1; markSeen(c); continue; }
     if (role.status === 'unverified' && !allowU && !canEnrich) { excluded.unverified_role += 1; markSeen(c); continue; }
-    c.meta.prefilterScore = Math.round((prefilterScore(c, spec) - (g.status === 'unverified' || role.status === 'unverified' ? 0.5 : 0)) * 1000) / 1000;
+    c.meta.prefilterScore = Math.round((prefilterScore(c, spec) - (geoPending ? 1 : g.status === 'unverified' || role.status === 'unverified' ? 0.5 : 0)) * 1000) / 1000;
     keep.push(c);
   }
   keep.sort((a, b) => b.meta.prefilterScore - a.meta.prefilterScore || (a.meta.searchRank ?? 1e9) - (b.meta.searchRank ?? 1e9));
@@ -262,6 +319,7 @@ export async function retrieveIndividualsPage(ctx, tab) {
   }
 
   const hasMore = !st.creditsOut && (queries.some((q) => st.cursors[q] !== null) || st.pool.length > 0);
+  delete st.cursors.__research__; delete st.cursors.__dev__;
   st.lastPage = { page: tab.page, considered, returned: candidates.length, pooled: st.pool.length, excluded: { ...excluded } };
   ctx.log(`Returned ${candidates.length} verified people; excluded ${Object.values(excluded).reduce((a, b) => a + b, 0)}`);
   return { candidates, excluded, hasMore };

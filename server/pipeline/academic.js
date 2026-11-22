@@ -125,6 +125,7 @@ async function llmLabs(ctx, items) {
     user: listing,
     schema: LabSchema,
     maxTokens: 1500,
+    usage: ctx.llm.usage,
   });
   return out.labs.filter((l) => items[l.index] && l.name?.trim()).map((l) => ({ i: l.index, name: l.name.trim(), parent: l.parent?.trim() || undefined, location: l.location?.trim() || undefined }));
 }
