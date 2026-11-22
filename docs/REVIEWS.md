@@ -63,3 +63,27 @@ the OAuth connect polling, and mobile width.
   and only the "Connect Crustdata" button starts sign-in. Regression test: `server/test/gateway.test.js`.
 - Before this fix, one review run registered the app as an OAuth client with Crustdata (no sign-in, no tokens, no
   data access). That registration is reused when someone clicks Connect.
+
+## Review 2 (2026-11-22) — Laptop 3 re-review
+
+`laptop-3/retrieval-pipeline` at a093da3 (merged `main`, then "Pipeline tests + live-verified Crustdata request rules").
+**Approved.** All four required changes are done:
+1. Person search sends `mode: 'exact'` (with a comment explaining why).
+2. Person search sends `fields` (`crustdata_person_id`, `basic_profile`, `social_handles`, `fit`, plus `experience` only
+   for institute scope), and `fit` feeds the prefilter score.
+3. Ranked company search no longer sends a cursor. Later pages continue with a filters-only topic search that does
+   paginate. Company search sends `fields` (`headcount` only when a size filter is set).
+4. 40 tests in `server/test/pipeline/` (geography, constraints, dedupe, academic, sample-mode page builders).
+
+Also added: research-profile and developer-profile second pulls (≤ 25 rows each, once, unioned with the main pull).
+
+Verified by Laptop 4: merged onto `main` (with L1 + L2) with no conflicts. `npm run check` passes with 49 tests. Two
+end-to-end searches in the browser held every hard constraint:
+- Professor persona, Both, research hubs SF Bay Area + Bengaluru: all results verified in a hub, a web-discovered lab
+  verified through its parent institution, and 32 location-less paper authors excluded (unverified not allowed).
+- "My institute" scope: every person a verified affiliate of the institute.
+
+Found and fixed on the Laptop 4 side (`shared/catalog.js`, not Laptop 3's code): the Universities rule matched any
+"Research Services" company, and the corporate R&D rules matched universities. Academic types now exclude
+privately held and public companies, and corporate R&D types exclude educational institutions. Laptop 3's change request (count
+lab-extraction LLM calls in `llmUsage`) is resolved in `job.js`.
