@@ -236,3 +236,21 @@ Checked by Laptop 4:
   `web/src/api/types.ts`, `client.ts`). Accepted because the owner asked for the merge. Laptop 2: pull `main`.
   Next time, request contract changes through `docs/CHANGE_REQUESTS.md` first.
 - Not changed: draft calls aren't added to the search's "LLM calls" counter, which covers building results only.
+
+## Review 10 (2026-11-22) — Overlap design system and landing page
+
+`design/overlap-system` at 39c7665 (Vinayak-bit), merged on top of the outreach drafts with no conflicts (ea8d7bc).
+Adds a landing page for signed-out visitors (and `#/overview`), a sign-in route (`#/signin`), shared header and footer,
+light/dark theme, and restyles the whole app. No new dependencies; Inter and JetBrains Mono load from Google Fonts.
+
+For every laptop:
+- The UI kit moved to `web/src/components/ui/` and hooks to `web/src/hooks/`. `web/src/ui/index.ts` re-exports both, so
+  existing `from '../../ui'` imports keep working. `web/src/ui/components.tsx` and `ui.css` are gone; styles live in
+  `web/src/styles/components.css` and `tokens.css`.
+- Copy changes in the wizard: "Find matches" (was "Find Matches"), "Check my topic" on Describe, "Your search spec".
+- Landing demo data (`features/landing/content.ts`) is fictional and tagged "Illustrative". Its rubric weights match
+  `shared/catalog.js` RUBRICS; keep them in sync if the rubric changes.
+
+Verified by Laptop 4: `npm run check` passes (69 tests). Browser, live server: results page, ranking details and the
+draft-email panel render in the new design; signed-in users go straight to the "Your profile" step; `#/overview` shows
+the landing page; no script errors. Signed-out landing and dark theme were not clicked through.
